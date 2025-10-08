@@ -9,18 +9,55 @@ import { useToast } from "@/hooks/use-toast";
 import { useSearch } from "@/hooks/useSearch";
 import { useCreateDownload } from "@/hooks/useDownloads";
 import type { SearchSuggestion } from "@shared/schema";
+import { saveSearchToHistory } from "@/lib/searchHistory";
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [selectedSuggestion, setSelectedSuggestion] = useState<SearchSuggestion | null>(null);
-  const [article, setArticle] = useState<any>(null);
+  const [query, setQuery] = useState(() => {
+    return sessionStorage.getItem('searchQuery') || "";
+  });
+  const [selectedSuggestion, setSelectedSuggestion] = useState<SearchSuggestion | null>(() => {
+    const saved = sessionStorage.getItem('selectedSuggestion');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [article, setArticle] = useState<any>(() => {
+    const saved = sessionStorage.getItem('currentArticle');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [isTyping, setIsTyping] = useState(false);
   const [showPulse, setShowPulse] = useState(false);
-  const [typedContent, setTypedContent] = useState("");
+  const [typedContent, setTypedContent] = useState(() => {
+    const saved = sessionStorage.getItem('currentArticle');
+    return saved ? JSON.parse(saved)?.content || "" : "";
+  });
   
   const { toast } = useToast();
   const { data: searchData, isLoading: isSearching } = useSearch(query);
   const createDownload = useCreateDownload();
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    if (query) {
+      sessionStorage.setItem('searchQuery', query);
+    } else {
+      sessionStorage.removeItem('searchQuery');
+    }
+  }, [query]);
+
+  useEffect(() => {
+    if (selectedSuggestion) {
+      sessionStorage.setItem('selectedSuggestion', JSON.stringify(selectedSuggestion));
+    } else {
+      sessionStorage.removeItem('selectedSuggestion');
+    }
+  }, [selectedSuggestion]);
+
+  useEffect(() => {
+    if (article) {
+      sessionStorage.setItem('currentArticle', JSON.stringify(article));
+    } else {
+      sessionStorage.removeItem('currentArticle');
+    }
+  }, [article]);
 
   const fetchArticle = async (suggestion: SearchSuggestion) => {
     try {
@@ -80,6 +117,7 @@ export default function SearchPage() {
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setSelectedSuggestion(suggestion);
+    saveSearchToHistory(suggestion.title);
     fetchArticle(suggestion);
   };
 
