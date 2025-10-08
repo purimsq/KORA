@@ -58,7 +58,7 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
     <div className="relative w-full max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" data-testid="icon-search" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none" data-testid="icon-search" />
           <Input
             ref={inputRef}
             type="text"
@@ -72,7 +72,7 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
             <button
               type="button"
               onClick={clearSearch}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors hover-elevate rounded-full p-1"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors hover-elevate rounded-full p-1 z-10"
               data-testid="button-clear-search"
             >
               <X className="w-5 h-5" />
