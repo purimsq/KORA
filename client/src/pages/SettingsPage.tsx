@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FontSelector } from "@/components/FontSelector";
 import { BackgroundDecorations } from "@/components/BackgroundDecorations";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePreferences, useUpdatePreferences } from "@/hooks/usePreferences";
 
 export default function SettingsPage() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { data, isLoading } = usePreferences();
   const updatePreferences = useUpdatePreferences();
@@ -83,6 +87,16 @@ export default function SettingsPage() {
       <div className="relative z-10 container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 animate-fade-in">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/")}
+              className="mb-4 gap-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Search
+            </Button>
             <h1 className="text-4xl font-bold text-foreground mb-4">
               Settings
             </h1>

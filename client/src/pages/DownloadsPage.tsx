@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { ArticleCard } from "@/components/ArticleCard";
 import { BackgroundDecorations } from "@/components/BackgroundDecorations";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, ArrowLeft } from "lucide-react";
 import { useDownloads, useDeleteDownload } from "@/hooks/useDownloads";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +79,16 @@ export default function DownloadsPage() {
 
       <div className="relative z-10 container mx-auto px-4 py-12">
         <div className="mb-8 animate-fade-in">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/")}
+            className="mb-4 gap-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Search
+          </Button>
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Downloaded Articles
           </h1>

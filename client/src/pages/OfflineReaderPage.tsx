@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { HighlightToolbar } from "@/components/HighlightToolbar";
 import { ThoughtCloud } from "@/components/ThoughtCloud";
@@ -10,7 +10,8 @@ import {
   Bookmark as BookmarkIcon, 
   RotateCcw, 
   Search as SearchIcon,
-  ChevronDown 
+  ChevronDown,
+  ArrowLeft
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,6 +51,7 @@ import {
 
 export default function OfflineReaderPage() {
   const [, params] = useRoute("/reader/:id");
+  const [, setLocation] = useLocation();
   const downloadId = params?.id || '';
   
   const [selection, setSelection] = useState<{ text: string; range: Range } | null>(null);
@@ -316,6 +318,16 @@ export default function OfflineReaderPage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/downloads")}
+                className="gap-2"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
               <div className="relative flex-1 max-w-xs">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
