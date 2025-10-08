@@ -141,8 +141,14 @@ export function AnnotatedArticle({
           position={thoughtPosition}
           onSave={() => {}}
           onCancel={() => setActiveThought(null)}
-          onEdit={onUpdateThought}
-          onDelete={onDeleteThought}
+          onEdit={(id, text) => {
+            onUpdateThought(id, text);
+            setActiveThought(null);
+          }}
+          onDelete={(id) => {
+            onDeleteThought(id);
+            setActiveThought(null);
+          }}
         />
       )}
 
@@ -152,8 +158,14 @@ export function AnnotatedArticle({
           position={notePosition}
           onSave={() => {}}
           onCancel={() => setActiveNote(null)}
-          onEdit={onUpdateAnnotation}
-          onDelete={onDeleteAnnotation}
+          onEdit={(id, content) => {
+            onUpdateAnnotation(id, content);
+            setActiveNote(null);
+          }}
+          onDelete={(id) => {
+            onDeleteAnnotation(id);
+            setActiveNote(null);
+          }}
         />
       )}
     </>

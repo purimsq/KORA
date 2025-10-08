@@ -54,6 +54,12 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
     inputRef.current?.focus();
   };
 
+  const handleInputFocus = () => {
+    if (query.length > 2 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
   return (
     <div className="relative w-full max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="relative">
@@ -65,6 +71,7 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
             placeholder="Search for medical topics..."
             value={query}
             onChange={handleQueryChange}
+            onFocus={handleInputFocus}
             className="pl-12 pr-12 h-14 text-base rounded-full border-2 focus-visible:ring-4 focus-visible:ring-primary/20 transition-all shadow-lg hover:shadow-xl"
             data-testid="input-search"
           />
