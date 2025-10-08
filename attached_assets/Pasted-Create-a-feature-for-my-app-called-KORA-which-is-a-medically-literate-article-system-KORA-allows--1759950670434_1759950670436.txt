@@ -1,0 +1,139 @@
+Create a feature for my app called KORA, which is a medically literate article system.
+KORA allows users to search, view, and download medical/scientific articles (with images) in a smooth, interactive way, without using AI.
+________________________________________
+🧩 Core Logic
+1.	When a user searches for an article:
+o	The app first checks the local database (BetterSQLite3) for a match.
+o	If a match is found → instantly display it.
+o	If no match is found → fetch from Semantic Scholar API for scientific data.
+o	If no data is found there → fetch from Wikipedia API for summaries + images.
+o	Display the fetched article as if it’s being typed live (like GitHub Copilot typing in VS Code). Images fade-in nicely.
+o	Articles are temporarily stored in memory only while the user is viewing them.
+When a new search happens, the previously viewed article is cleared.
+2.	If the user clicks “Download Article”, the following happens:
+o	The full article (text + images + metadata) is saved locally in the BetterSQLite3 database.
+o	A small “Downloaded” status appears beside that article in search suggestions (like Google’s “visited” links).
+o	The article becomes available under a “Downloads” page for offline reading.
+o	All data is saved to automatically avoid data loss even when app closes mistakenly. 
+________________________________________
+💾 Downloads Page
+•	Shows all downloaded articles stored locally.
+•	Each article displays its title, category, date saved, and a preview thumbnail (first image or first few lines).
+•	Clicking an article opens it for offline reading (rendering text and images properly).
+•	A “Save as PDF” button allows the user to export the article to their PC as a PDF, including images and formatting.
+•	Clicking opens the offline reader/editor view.
+🧰 3️⃣ Offline Reader & Editor Features
+When reading a downloaded article, users can:
+✨ Highlight
+•	Select text and highlight it in yellow or green.
+•	Highlights are saved automatically in the local database.
+📑 Bookmark
+•	Add one or multiple bookmarks.
+•	On reopening, users can choose “Scroll to Bookmark”.
+•	Bookmarks are auto-saved.
+☁️ Add Thought (Unique Feature)
+•	When a user selects a text section and clicks “Add Thought”:
+o	A small cartoon-style cloud appears above the selected text.
+o	Inside the cloud is a text box where they can type their thought.
+o	They can Save or Cancel.
+o	The original highlighted section remains highlighted in a distinct color (e.g., light blue).
+o	When hovering over that highlight:
+	A “View Thought” button appears.
+	Clicking it opens the thought in a neat floating box with the text they wrote and a “Close” button.
+o	Thoughts can later be edited or deleted.
+o	All changes (add, edit, delete) are saved automatically in the local database.
+📝 Other Editing Features
+•	Underline important terms.
+•	Add small sticky notes in the margin (stored per article).
+•	Auto-save all user edits (no manual save required).
+•	Restore defaults to remove all annotations for an article.
+•	Search for a word in the downloaded documents.
+
+PDF generation:
+Use jsPDF (frontend) or pdfkit (backend) to convert the article’s HTML/text and images into a PDF and download it.
+________________________________________
+⚙️ Storage & APIs
+Purpose	Tool	Description
+Temporary data	In-memory (JS variables / context)	Holds currently viewed article
+Persistent local storage	BetterSQLite3	Stores downloaded articles only
+Article search	Semantic Scholar API	Fetch structured scientific content
+Fallback data	Wikipedia REST API	Fetch summaries + images for general topics
+Export	jsPDF or pdfkit	Save downloaded articles as PDF files
+________________________________________
+💡 Search Suggestions
+•	While typing, show live search suggestions (like Google/YouTube style).
+•	If a suggestion exists in local downloads, show a small “Downloaded” badge next to it.
+•	Clicking a suggestion loads the full article view.
+
+🧠 5️⃣ Search & Display Behavior
+•	Search suggestions show both:
+o	Online matches (Semantic Scholar + Wikipedia)
+o	Local matches (BetterSQLite3)
+•	Downloaded articles in suggestions have a small “Downloaded” badge.
+•	Clicking them loads from local storage instantly.
+
+📂 6️⃣ Export as PDF
+•	Users can export any downloaded article as a PDF with:
+o	Highlights
+o	Thoughts (as side notes or footnotes)
+o	Embedded images
+o	Title, subtitle, and formatted text
+Generated using jsPDF (frontend) or pdfkit (backend). 
+Users are prompted by a pop up to select either with their edits(if they edited the download at all) or without the edits and they comfirm.
+
+
+________________________________________
+🎨 UI Behavior
+•	Article appears with proper formatting:
+o	Title: bold and large
+o	Subtitles: smaller but bold
+o	Paragraphs: normal readable text
+o	Images: embedded at the correct places
+o	Hover effects for highlights and action buttons (View Thought, Add Thought, Delete, etc.)
+o	Delete function for downloaded data, and when in a downloaded article then delete function for any edit made and also a cancel button for all edit features to abort edit. 
+o	DELETING ALSO DELETES FROM LOCAL STORAGE COMPLETELY! 
+•	When fetching online → show live feedback:
+“Searching Semantic Scholar…”
+“Fetching Wikipedia data…”
+“Displaying results…”
+•	If no results found → show:
+“No results found for this topic.”
+________________________________________
+🏆 Overall Design Goals
+•	No uploads or user-generated spam.
+•	Lightweight but powerful.
+•	Works offline (for downloaded articles).
+•	Feels interactive, modern, and educational.
+•	Articles are displayed with text and images, and can be saved as PDFs.
+•	The system grows smarter locally, not through AI but through user downloads.
+
+10️⃣ Optional Later Add-ons
+-	Randomize button to search for random article about medicine.
+
+
+
+
+FINAL PLAN:
+A medical article search and management system with online/offline detection, completion notifications, offline reading, annotation tools, and Electron-compatible architecture
+I'll include the following features:
+•	Search interface with live suggestions matching the cream/beige and dark teal color scheme from the design
+•	Online/offline status indicator with real-time connection monitoring
+•	Offline mode handling: prevent online searches and display 'Connect to internet' message when offline
+•	Semantic Scholar API integration for scientific articles with fallback to Wikipedia API (online only)
+•	Local BetterSQLite3 database for downloaded articles storage
+•	Article display with live typing effect and fade-in images
+•	Green pulse animation when article loading completes (if user on article page)
+•	Toast notification when article loading completes (if user on different page like Downloads)
+•	Download functionality to save articles locally with 'Downloaded' badge in search suggestions
+•	Downloads page showing all saved articles with thumbnails and metadata
+•	Offline reader with highlight feature (yellow/green colors) with auto-save
+•	Bookmark functionality with scroll-to-bookmark feature
+•	Unique 'Add Thought' feature with cartoon cloud UI and text input
+•	Additional editing tools: underline, sticky notes, and in-document search
+•	PDF export with jsPDF including all content, images, and user annotations
+•	Delete functionality for downloads and individual edits
+•	Responsive UI with KORA branding, search bar, and Downloads button (no Upload button)
+•	Allow searching downloaded articles even when offline
+•	Electron-compatible architecture (localStorage/IndexedDB fallback for BetterSQLite3, relative paths, no hardcoded URLs)
+
+
