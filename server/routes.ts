@@ -34,31 +34,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Search Semantic Scholar
+      // Search PubMed (NCBI E-Utilities)
       try {
-        const semanticResponse = await axios.get(
-          `https://api.semanticscholar.org/graph/v1/paper/search`,
+        const pubmedResponse = await axios.get(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`,
           {
-            params: { query: q, limit: 5, fields: 'title,abstract,authors,url' },
+            params: { 
+              db: 'pubmed', 
+              term: q, 
+              retmode: 'json', 
+              retmax: 10 
+            },
             timeout: 5000,
           }
         );
 
-        if (semanticResponse.data?.data) {
-          semanticResponse.data.data.forEach((paper: any) => {
-            const isDownloaded = localDownloads.some(d => d.title === paper.title);
-            if (!suggestions.find(s => s.title === paper.title)) {
-              suggestions.push({
-                id: paper.paperId || `semantic-${Date.now()}-${Math.random()}`,
-                title: paper.title,
-                source: 'semantic_scholar',
-                isDownloaded,
+        if (pubmedResponse.data?.esearchresult?.idlist) {
+          const pmids = pubmedResponse.data.esearchresult.idlist.slice(0, 5);
+          
+          if (pmids.length > 0) {
+            const fetchResponse = await axios.get(
+              `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi`,
+              {
+                params: { 
+                  db: 'pubmed', 
+                  id: pmids.join(','), 
+                  retmode: 'json' 
+                },
+                timeout: 5000,
+              }
+            );
+
+            if (fetchResponse.data?.result) {
+              pmids.forEach((pmid: string) => {
+                const paper = fetchResponse.data.result[pmid];
+                if (paper && paper.title) {
+                  const isDownloaded = localDownloads.some(d => d.title === paper.title);
+                  if (!suggestions.find(s => s.title === paper.title)) {
+                    suggestions.push({
+                      id: pmid,
+                      title: paper.title,
+                      source: 'pubmed',
+                      isDownloaded,
+                    });
+                  }
+                }
               });
             }
-          });
+          }
         }
       } catch (error) {
-        console.error('Semantic Scholar API error:', error);
+        console.error('PubMed API error:', error);
+      }
+
+      // Search medRxiv/bioRxiv preprints
+      if (suggestions.length < 5) {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          
+          const medRxivResponse = await axios.get(
+            `https://api.biorxiv.org/details/medrxiv/${monthAgo}/${today}/0`,
+            { timeout: 5000 }
+          );
+
+          if (medRxivResponse.data?.collection) {
+            const filtered = medRxivResponse.data.collection
+              .filter((paper: any) => 
+                paper.title.toLowerCase().includes(q.toLowerCase()) ||
+                paper.abstract?.toLowerCase().includes(q.toLowerCase())
+              )
+              .slice(0, 3);
+
+            filtered.forEach((paper: any) => {
+              const isDownloaded = localDownloads.some(d => d.title === paper.title);
+              if (!suggestions.find(s => s.title === paper.title)) {
+                suggestions.push({
+                  id: paper.doi,
+                  title: paper.title,
+                  source: 'medrxiv',
+                  isDownloaded,
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('medRxiv API error:', error);
+        }
+      }
+
+      // Search Semantic Scholar
+      if (suggestions.length < 5) {
+        try {
+          const semanticResponse = await axios.get(
+            `https://api.semanticscholar.org/graph/v1/paper/search`,
+            {
+              params: { query: q, limit: 5, fields: 'title,abstract,authors,url' },
+              timeout: 5000,
+            }
+          );
+
+          if (semanticResponse.data?.data) {
+            semanticResponse.data.data.forEach((paper: any) => {
+              const isDownloaded = localDownloads.some(d => d.title === paper.title);
+              if (!suggestions.find(s => s.title === paper.title)) {
+                suggestions.push({
+                  id: paper.paperId || `semantic-${Date.now()}-${Math.random()}`,
+                  title: paper.title,
+                  source: 'semantic_scholar',
+                  isDownloaded,
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Semantic Scholar API error:', error);
+        }
       }
 
       // Fallback to Wikipedia if not enough results
@@ -111,7 +202,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let articleData: any = null;
 
-      if (source === 'semantic_scholar') {
+      if (source === 'pubmed') {
+        // Fetch from PubMed
+        const response = await axios.get(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi`,
+          {
+            params: { 
+              db: 'pubmed', 
+              id, 
+              retmode: 'xml', 
+              rettype: 'abstract' 
+            },
+            timeout: 10000,
+          }
+        );
+
+        // Parse XML to extract title, abstract, authors
+        const xmlData = response.data;
+        const titleMatch = xmlData.match(/<ArticleTitle>([\s\S]*?)<\/ArticleTitle>/);
+        const abstractMatch = xmlData.match(/<AbstractText.*?>([\s\S]*?)<\/AbstractText>/);
+        const authorMatches = xmlData.match(/<Author.*?>([\s\S]*?)<\/Author>/g);
+        
+        const authors: string[] = [];
+        if (authorMatches) {
+          authorMatches.forEach((author: string) => {
+            const lastNameMatch = author.match(/<LastName>(.*?)<\/LastName>/);
+            const foreNameMatch = author.match(/<ForeName>(.*?)<\/ForeName>/);
+            if (lastNameMatch && foreNameMatch) {
+              authors.push(`${foreNameMatch[1]} ${lastNameMatch[1]}`);
+            }
+          });
+        }
+
+        if (titleMatch) {
+          const abstract = abstractMatch ? abstractMatch[1].replace(/<[^>]*>/g, '') : 'No abstract available.';
+          articleData = {
+            title: titleMatch[1],
+            content: abstract,
+            abstract,
+            authors,
+            source: 'pubmed',
+            sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+            category: 'scientific',
+            images: [],
+          };
+        }
+      } else if (source === 'medrxiv') {
+        // Fetch from medRxiv
+        const response = await axios.get(
+          `https://api.biorxiv.org/details/medrxiv/${id}`,
+          { timeout: 10000 }
+        );
+
+        if (response.data?.collection?.[0]) {
+          const paper = response.data.collection[0];
+          const authors = paper.authors ? paper.authors.split(';').map((a: string) => a.trim()) : [];
+          
+          articleData = {
+            title: paper.title,
+            content: paper.abstract || 'No abstract available.',
+            abstract: paper.abstract,
+            authors,
+            source: 'medrxiv',
+            sourceUrl: `https://www.medrxiv.org/content/${paper.doi}`,
+            category: 'preprint',
+            images: [],
+          };
+        }
+      } else if (source === 'semantic_scholar') {
         // Fetch from Semantic Scholar
         const response = await axios.get(
           `https://api.semanticscholar.org/graph/v1/paper/${id}`,

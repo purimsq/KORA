@@ -176,6 +176,7 @@ export default function SearchPage() {
               onSuggestionClick={handleSuggestionClick}
               suggestions={searchData?.suggestions || []}
               isLoading={isSearching}
+              initialQuery={query}
             />
           </div>
 

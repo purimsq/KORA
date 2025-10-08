@@ -10,12 +10,20 @@ interface SearchBarProps {
   onSuggestionClick?: (suggestion: SearchSuggestion) => void;
   suggestions?: SearchSuggestion[];
   isLoading?: boolean;
+  initialQuery?: string;
 }
 
-export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoading }: SearchBarProps) {
-  const [query, setQuery] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
+export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoading, initialQuery = "" }: SearchBarProps) {
+  const [query, setQuery] = useState(initialQuery);
+  const [showSuggestions, setShowSuggestions] = useState(initialQuery.length > 2 && suggestions.length > 0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update query when initialQuery prop changes
+  useEffect(() => {
+    if (initialQuery && initialQuery !== query) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   useEffect(() => {
     if (query.length > 2) {
