@@ -25,7 +25,8 @@ export function AnnotatedArticle({
   onDeleteThought,
   onUpdateAnnotation,
   onDeleteAnnotation,
-}: AnnotatedArticleProps) {
+  onNoteClick,
+}: AnnotatedArticleProps & { onNoteClick?: (text: string) => void }) {
   const [activeThought, setActiveThought] = useState<Thought | null>(null);
   const [activeNote, setActiveNote] = useState<Annotation | null>(null);
   const [thoughtPosition, setThoughtPosition] = useState({ top: 0, left: 0 });
@@ -98,6 +99,17 @@ export function AnnotatedArticle({
         }
       });
 
+      // Apply sticky note highlights with colors
+      paraAnnotations.filter(a => a.type === 'sticky_note').forEach(annotation => {
+        if (annotation.text && annotation.color) {
+          const colorClass = `highlight-${annotation.color}`;
+          renderedText = renderedText.replace(
+            annotation.text,
+            `<span class="${colorClass}" data-note-text="${annotation.text}">${annotation.text}</span>`
+          );
+        }
+      });
+
       return (
         <p 
           key={idx} 
@@ -124,16 +136,28 @@ export function AnnotatedArticle({
       </div>
 
       {/* Render sticky notes in margin */}
-      {annotations.filter(a => a.type === 'sticky_note').map((note, idx) => (
-        <div 
-          key={note.id}
-          className="absolute right-0 top-0"
-          style={{ marginTop: `${idx * 120}px` }}
-          onMouseEnter={(e) => handleNoteHover(note, e as any)}
-        >
-          <div className="w-4 h-4 bg-yellow-400 rounded-full cursor-pointer" />
-        </div>
-      ))}
+      {annotations.filter(a => a.type === 'sticky_note').map((note, idx) => {
+        const colorMap: Record<string, string> = {
+          yellow: 'bg-yellow-400',
+          pink: 'bg-pink-400',
+          blue: 'bg-blue-400',
+          green: 'bg-green-400',
+          purple: 'bg-purple-400',
+        };
+        const bgColor = colorMap[note.color || 'yellow'] || 'bg-yellow-400';
+        
+        return (
+          <div 
+            key={note.id}
+            className="absolute right-0 top-0"
+            style={{ marginTop: `${idx * 120}px` }}
+            onClick={() => onNoteClick?.(note.text)}
+            onMouseEnter={(e) => handleNoteHover(note, e as any)}
+          >
+            <div className={`w-4 h-4 ${bgColor} rounded-full cursor-pointer hover:scale-110 transition-transform`} />
+          </div>
+        );
+      })}
 
       {activeThought && (
         <ThoughtCloud

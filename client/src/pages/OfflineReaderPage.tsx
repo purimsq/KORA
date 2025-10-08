@@ -162,14 +162,15 @@ export default function OfflineReaderPage() {
     }
   };
 
-  const handleSaveNote = (content: string) => {
+  const handleSaveNote = (content: string, color: string) => {
     if (selection) {
       createAnnotation.mutate({
         downloadId,
         type: 'sticky_note',
         text: selection.text,
         content,
-        position: 0,
+        color,
+        position: window.scrollY,
       }, {
         onSuccess: () => {
           toast({ title: "Note Saved" });
@@ -177,6 +178,43 @@ export default function OfflineReaderPage() {
           setSelection(null);
         },
       });
+    }
+  };
+
+  const handleNoteClick = (noteText: string) => {
+    // Find the text in the article
+    const articleContent = document.querySelector('[data-testid="article-content"]');
+    if (articleContent && noteText) {
+      const textNodes: Text[] = [];
+      const walker = document.createTreeWalker(
+        articleContent,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      
+      let node;
+      while ((node = walker.nextNode())) {
+        textNodes.push(node as Text);
+      }
+      
+      // Find the node containing the text
+      for (const textNode of textNodes) {
+        if (textNode.textContent?.includes(noteText)) {
+          const parent = textNode.parentElement;
+          if (parent) {
+            // Scroll to the element
+            parent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add pop effect
+            parent.classList.add('animate-pulse');
+            setTimeout(() => {
+              parent.classList.remove('animate-pulse');
+            }, 1000);
+            
+            break;
+          }
+        }
+      }
     }
   };
 
@@ -435,6 +473,7 @@ export default function OfflineReaderPage() {
                 onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
                 onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
                 onDeleteAnnotation={(id) => deleteAnnotation.mutate({ id, downloadId })}
+                onNoteClick={handleNoteClick}
               />
               {article.images && article.images.length > 1 && (
                 <div className="space-y-4 clear-both">

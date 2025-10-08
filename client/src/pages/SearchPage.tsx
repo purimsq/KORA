@@ -121,6 +121,9 @@ export default function SearchPage() {
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+    // Clear current article before loading new one
+    setArticle(null);
+    setTypedContent("");
     setSelectedSuggestion(suggestion);
     saveSearchToHistory(suggestion.title);
     fetchArticle(suggestion);

@@ -248,9 +248,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       } else if (source === 'medrxiv') {
-        // Fetch from medRxiv
+        // Fetch from medRxiv - id is the DOI
         const response = await axios.get(
-          `https://api.biorxiv.org/details/medrxiv/${id}`,
+          `https://api.biorxiv.org/details/medrxiv/${encodeURIComponent(id)}`,
           { timeout: 10000 }
         );
 
