@@ -25,6 +25,12 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
     }
   }, [query]);
 
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    onSearch(newQuery);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
@@ -43,6 +49,7 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
 
   const clearSearch = () => {
     setQuery("");
+    onSearch("");
     setShowSuggestions(false);
     inputRef.current?.focus();
   };
@@ -57,7 +64,7 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
             type="text"
             placeholder="Search for medical topics..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             className="pl-12 pr-12 h-14 text-base rounded-full border-2 focus-visible:ring-4 focus-visible:ring-primary/20 transition-all shadow-lg hover:shadow-xl"
             data-testid="input-search"
           />
