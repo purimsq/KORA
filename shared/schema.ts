@@ -148,6 +148,10 @@ export type SearchSuggestion = {
   isDownloaded?: boolean;
 };
 
+export type SearchResponse = {
+  suggestions: SearchSuggestion[];
+};
+
 export type ArticleImage = {
   url: string;
   caption?: string;

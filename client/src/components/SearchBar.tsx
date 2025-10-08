@@ -7,11 +7,12 @@ import type { SearchSuggestion } from "@shared/schema";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
+  onSuggestionClick?: (suggestion: SearchSuggestion) => void;
   suggestions?: SearchSuggestion[];
   isLoading?: boolean;
 }
 
-export function SearchBar({ onSearch, suggestions = [], isLoading }: SearchBarProps) {
+export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoading }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,8 +35,10 @@ export function SearchBar({ onSearch, suggestions = [], isLoading }: SearchBarPr
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setQuery(suggestion.title);
-    onSearch(suggestion.title);
     setShowSuggestions(false);
+    if (onSuggestionClick) {
+      onSuggestionClick(suggestion);
+    }
   };
 
   const clearSearch = () => {

@@ -135,37 +135,10 @@ export default function SearchPage() {
           <div className="mb-12">
             <SearchBar 
               onSearch={handleSearch}
+              onSuggestionClick={handleSuggestionClick}
               suggestions={searchData?.suggestions || []}
               isLoading={isSearching}
             />
-
-            {/* Render suggestions manually for click handling */}
-            {query.length > 2 && searchData?.suggestions && searchData.suggestions.length > 0 && !selectedSuggestion && (
-              <Card className="mt-2 p-2 shadow-xl border-2 animate-fade-in">
-                {searchData.suggestions.map((suggestion: SearchSuggestion) => (
-                  <button
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left px-4 py-3 rounded-lg hover-elevate active-elevate-2 transition-all"
-                    data-testid={`suggestion-${suggestion.id}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{suggestion.title}</p>
-                        <p className="text-sm text-muted-foreground capitalize">
-                          {suggestion.source.replace('_', ' ')}
-                        </p>
-                      </div>
-                      {suggestion.isDownloaded && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          Downloaded
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </Card>
-            )}
           </div>
 
           {article && (

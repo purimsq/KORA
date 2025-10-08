@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import type { SearchSuggestion } from "@shared/schema";
+import type { SearchResponse } from "@shared/schema";
 
 export function useSearch(query: string) {
-  return useQuery({
+  return useQuery<SearchResponse>({
     queryKey: ['/api/search', query],
     enabled: query.length > 2,
     staleTime: 30000,
