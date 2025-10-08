@@ -110,9 +110,14 @@ export default function SearchPage() {
 
   const handleSearch = async (searchQuery: string) => {
     setQuery(searchQuery);
-    setArticle(null);
-    setTypedContent("");
-    setSelectedSuggestion(null);
+    // Only clear article if it's a new search (not just clearing the search box)
+    if (searchQuery.length === 0) {
+      // Don't clear article when just clearing search
+    } else {
+      setArticle(null);
+      setTypedContent("");
+      setSelectedSuggestion(null);
+    }
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
@@ -203,30 +208,43 @@ export default function SearchPage() {
                 </p>
               )}
 
-              <div className="prose prose-lg max-w-none article-font">
+              <div className="prose prose-lg max-w-none article-font space-y-6">
+                {article.images && article.images.length > 0 && (
+                  <div className="float-right ml-6 mb-4 w-full sm:w-1/2 animate-fade-in">
+                    <img 
+                      src={article.images[0].url} 
+                      alt={article.images[0].caption || article.title}
+                      className="w-full rounded-lg shadow-md"
+                    />
+                    {article.images[0].caption && (
+                      <p className="text-sm text-muted-foreground italic mt-2">
+                        {article.images[0].caption}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <p data-testid="text-article-content">
                   {isTyping ? typedContent : article.content}
                 </p>
+                {article.images && article.images.length > 1 && (
+                  <div className="space-y-4 clear-both">
+                    {article.images.slice(1).map((img: any, index: number) => (
+                      <div key={index + 1} className="animate-fade-in">
+                        <img 
+                          src={img.url} 
+                          alt={img.caption || article.title}
+                          className="w-full rounded-lg shadow-md"
+                        />
+                        {img.caption && (
+                          <p className="text-sm text-muted-foreground italic mt-2">
+                            {img.caption}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {article.images && article.images.length > 0 && (
-                <div className="mt-6 space-y-4">
-                  {article.images.map((img: any, index: number) => (
-                    <div key={index} className="animate-fade-in">
-                      <img 
-                        src={img.url} 
-                        alt={img.caption || article.title}
-                        className="w-full rounded-lg shadow-md"
-                      />
-                      {img.caption && (
-                        <p className="text-sm text-muted-foreground italic mt-2">
-                          {img.caption}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {article.sourceUrl && (
                 <div className="mt-6 pt-6 border-t">
