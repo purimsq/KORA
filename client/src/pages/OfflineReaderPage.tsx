@@ -11,7 +11,8 @@ import {
   RotateCcw, 
   Search as SearchIcon,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  ExternalLink
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
