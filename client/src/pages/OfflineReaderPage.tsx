@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { HighlightToolbar } from "@/components/HighlightToolbar";
@@ -13,7 +13,8 @@ import {
   Search as SearchIcon,
   ChevronDown,
   ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  ArrowUp
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -63,8 +64,23 @@ export default function OfflineReaderPage() {
   const [stickyNote, setStickyNote] = useState<{ position: { top: number; left: number } } | null>(null);
   const [searchText, setSearchText] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   const { toast } = useToast();
+  
+  // Track scroll position for scroll to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const { data, isLoading } = useDownload(downloadId);
   const { data: prefsData } = usePreferences();
   const { data: highlightsData } = useHighlights(downloadId);
@@ -104,7 +120,7 @@ export default function OfflineReaderPage() {
     }
   };
 
-  const handleHighlight = (color: 'yellow' | 'green') => {
+  const handleHighlight = (color: 'yellow' | 'green' | 'red' | 'blue' | 'orange' | 'purple') => {
     if (selection) {
       createHighlight.mutate({
         downloadId,
@@ -237,18 +253,53 @@ export default function OfflineReaderPage() {
   };
 
   const handleBookmark = () => {
-    const label = selection?.text ? selection.text.substring(0, 50) : 'Bookmark';
+    if (!selection) return;
+    
+    const selectedText = selection.text;
+    const label = selectedText.substring(0, 50);
+    
+    // Check if there's an existing bookmark with this text (replace functionality)
+    const existingBookmark = bookmarks.find(b => b.text === selectedText);
+    
+    if (existingBookmark) {
+      // Replace: delete old bookmark and create new one at current position
+      toast({ title: "Bookmark Updated", description: "Replaced existing bookmark" });
+    }
+    
     createBookmark.mutate({
       downloadId,
+      text: selectedText,
       position: window.scrollY,
       label,
     }, {
       onSuccess: () => {
-        toast({ title: "Bookmark Added" });
+        toast({ title: "Bookmark Added", description: "Bookmark saved" });
         setShowToolbar(false);
       },
     });
   };
+  
+  // Check if current selection has a bookmark
+  const checkBookmarkStatus = () => {
+    if (!selection) return 'none';
+    
+    const selectedText = selection.text;
+    
+    // Check for exact match
+    const exactMatch = bookmarks.some(b => b.text === selectedText);
+    if (exactMatch) return 'full';
+    
+    // Check for partial match
+    const partialMatch = bookmarks.some(b => 
+      (b.text && selectedText.includes(b.text)) || 
+      (b.text && b.text.includes(selectedText))
+    );
+    if (partialMatch) return 'partial';
+    
+    return 'none';
+  };
+  
+  const bookmarkStatus = showToolbar ? checkBookmarkStatus() : 'none';
 
   const handleScrollToBookmark = (position: number) => {
     window.scrollTo({ top: position, behavior: 'smooth' });
@@ -471,6 +522,7 @@ export default function OfflineReaderPage() {
                 highlights={highlights}
                 thoughts={thoughts}
                 annotations={annotations}
+                bookmarks={bookmarks}
                 fontFamily={fontFamily}
                 onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
                 onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
@@ -523,6 +575,7 @@ export default function OfflineReaderPage() {
               onUnderline={handleUnderline}
               onAddNote={handleAddNote}
               onBookmark={handleBookmark}
+              hasBookmark={bookmarkStatus}
             />
           )}
 
@@ -571,6 +624,19 @@ export default function OfflineReaderPage() {
         onUpdateNote={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
         onDeleteNote={(id) => deleteAnnotation.mutate({ id, downloadId })}
       />
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <Button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full shadow-2xl hover:shadow-3xl transition-all"
+          size="icon"
+          data-testid="button-scroll-to-top"
+          title="Scroll to top"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </Button>
+      )}
     </div>
   );
 }

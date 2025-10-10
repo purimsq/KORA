@@ -4,13 +4,14 @@ import { Highlighter, MessageCircle, Underline as UnderlineIcon, StickyNote, Boo
 
 interface HighlightToolbarProps {
   position: { top: number; left: number };
-  onHighlight: (color: 'yellow' | 'green') => void;
+  onHighlight: (color: 'yellow' | 'green' | 'red' | 'blue' | 'orange' | 'purple') => void;
   onAddThought: () => void;
   onUnderline: () => void;
   onAddNote: () => void;
   onBookmark: () => void;
   onRemove?: () => void;
   hasAnnotation?: boolean;
+  hasBookmark?: 'none' | 'partial' | 'full';
 }
 
 export function HighlightToolbar({ 
@@ -21,7 +22,8 @@ export function HighlightToolbar({
   onAddNote, 
   onBookmark,
   onRemove,
-  hasAnnotation 
+  hasAnnotation,
+  hasBookmark 
 }: HighlightToolbarProps) {
   return (
     <Card 
@@ -38,22 +40,66 @@ export function HighlightToolbar({
           size="sm"
           variant="ghost"
           onClick={() => onHighlight('yellow')}
-          className="gap-2 px-3"
+          className="gap-1 px-2"
           data-testid="button-highlight-yellow"
+          title="Yellow highlight"
         >
           <Highlighter className="w-4 h-4 text-yellow-600" />
-          <span className="text-xs">Yellow</span>
         </Button>
 
         <Button
           size="sm"
           variant="ghost"
           onClick={() => onHighlight('green')}
-          className="gap-2 px-3"
+          className="gap-1 px-2"
           data-testid="button-highlight-green"
+          title="Green highlight"
         >
           <Highlighter className="w-4 h-4 text-green-600" />
-          <span className="text-xs">Green</span>
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onHighlight('red')}
+          className="gap-1 px-2"
+          data-testid="button-highlight-red"
+          title="Red - Important"
+        >
+          <Highlighter className="w-4 h-4 text-red-600" />
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onHighlight('blue')}
+          className="gap-1 px-2"
+          data-testid="button-highlight-blue"
+          title="Blue highlight"
+        >
+          <Highlighter className="w-4 h-4 text-blue-600" />
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onHighlight('orange')}
+          className="gap-1 px-2"
+          data-testid="button-highlight-orange"
+          title="Orange highlight"
+        >
+          <Highlighter className="w-4 h-4 text-orange-600" />
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onHighlight('purple')}
+          className="gap-1 px-2"
+          data-testid="button-highlight-purple"
+          title="Purple highlight"
+        >
+          <Highlighter className="w-4 h-4 text-purple-600" />
         </Button>
 
         <div className="w-px h-6 bg-border mx-1" />
@@ -92,10 +138,13 @@ export function HighlightToolbar({
           size="sm"
           variant="ghost"
           onClick={onBookmark}
-          title="Bookmark"
+          title={hasBookmark === 'full' ? 'Bookmark (already bookmarked)' : hasBookmark === 'partial' ? 'Bookmark (partially bookmarked)' : 'Bookmark'}
           data-testid="button-bookmark"
+          className={hasBookmark === 'full' ? 'text-blue-600' : hasBookmark === 'partial' ? 'text-blue-400' : ''}
         >
-          <Bookmark className="w-4 h-4" />
+          <Bookmark 
+            className={`w-4 h-4 ${hasBookmark === 'full' ? 'fill-blue-600' : hasBookmark === 'partial' ? 'fill-blue-400' : ''}`}
+          />
         </Button>
 
         {hasAnnotation && onRemove && (

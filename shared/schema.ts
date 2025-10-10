@@ -47,6 +47,7 @@ export const highlights = pgTable("highlights", {
 export const bookmarks = pgTable("bookmarks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   downloadId: varchar("download_id").notNull().references(() => downloads.id, { onDelete: 'cascade' }),
+  text: text("text"), // The bookmarked text
   position: integer("position").notNull(), // Scroll position or paragraph index
   label: text("label"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

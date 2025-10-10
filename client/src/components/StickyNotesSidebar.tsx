@@ -82,19 +82,26 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                   const colorConfig = STICKY_COLORS.find(c => c.name === note.color) || STICKY_COLORS[0];
                   const isEditing = editingNoteId === note.id;
 
+                  const rotation = idx % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]';
+                  const hoverRotation = idx % 2 === 0 ? 'hover:rotate-[-2deg]' : 'hover:rotate-[2deg]';
+                  
                   return (
                     <Card
                       key={note.id}
-                      className={`p-3 ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text} border-2 shadow-lg ${colorConfig.shadow} hover:shadow-xl transition-shadow cursor-pointer transform hover:-rotate-1`}
+                      className={`relative p-4 ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text} border-t-4 shadow-xl hover:shadow-2xl transition-all cursor-pointer transform ${rotation} ${hoverRotation}`}
                       style={{ 
-                        minHeight: '120px',
-                        background: `linear-gradient(135deg, ${colorConfig.bg} 0%, ${colorConfig.bg} 100%)`,
+                        minHeight: '140px',
+                        maxHeight: '200px',
+                        boxShadow: '0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1)',
                       }}
                       onClick={() => !isEditing && onNoteClick(note.text)}
                       data-testid={`sticky-note-${idx}`}
                     >
-                      {/* Sticky note header line */}
-                      <div className="h-1 bg-gradient-to-r from-transparent via-gray-400/30 to-transparent mb-3" />
+                      {/* Sticky note pin at the top */}
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-400 dark:bg-gray-600 rounded-full shadow-md" />
+                      
+                      {/* Sticky note realistic top edge */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-gray-400/20 to-transparent" />
                       
                       {isEditing ? (
                         <div onClick={(e) => e.stopPropagation()}>
@@ -127,11 +134,11 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                         </div>
                       ) : (
                         <>
-                          <p className={`text-sm whitespace-pre-wrap mb-3 font-handwriting ${colorConfig.text}`}>
+                          <p className={`text-sm whitespace-pre-wrap mb-4 leading-relaxed ${colorConfig.text}`} style={{ fontFamily: 'Comic Sans MS, cursive' }}>
                             {note.content}
                           </p>
-                          <div className="text-xs text-muted-foreground mb-2 italic">
-                            📍 {note.text.substring(0, 40)}...
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 italic border-t border-gray-300/30 pt-2">
+                            📍 Referenced: "{note.text.substring(0, 35)}{note.text.length > 35 ? '...' : ''}"
                           </div>
                           <div className="flex gap-1 justify-end">
                             <Button

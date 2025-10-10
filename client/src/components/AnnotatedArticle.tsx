@@ -1,13 +1,15 @@
 import { useState } from "react";
-import type { Highlight, Thought, Annotation } from "@shared/schema";
+import type { Highlight, Thought, Annotation, Bookmark } from "@shared/schema";
 import { ThoughtCloud } from "./ThoughtCloud";
 import { formatContentWithAnnotations } from "@/lib/contentParser";
+import { Bookmark as BookmarkIcon } from "lucide-react";
 
 interface AnnotatedArticleProps {
   content: string;
   highlights: Highlight[];
   thoughts: Thought[];
   annotations: Annotation[];
+  bookmarks: Bookmark[];
   fontFamily: string;
   onUpdateThought: (id: string, text: string) => void;
   onDeleteThought: (id: string) => void;
@@ -20,6 +22,7 @@ export function AnnotatedArticle({
   highlights,
   thoughts,
   annotations,
+  bookmarks,
   fontFamily,
   onUpdateThought,
   onDeleteThought,
@@ -50,6 +53,7 @@ export function AnnotatedArticle({
       const itemHighlights = highlights.filter(h => h.text && itemText.includes(h.text));
       const itemThoughts = thoughts.filter(t => t.highlightedText && itemText.includes(t.highlightedText));
       const itemAnnotations = annotations.filter(a => a.text && itemText.includes(a.text));
+      const itemBookmarks = bookmarks.filter(b => b.text && itemText.includes(b.text));
       
       // For headings, render without annotations
       if (item.type === 'heading' || item.type === 'subheading') {
@@ -63,7 +67,7 @@ export function AnnotatedArticle({
       }
 
       // For paragraphs, apply annotations if any exist
-      if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0) {
+      if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0 && itemBookmarks.length === 0) {
         return (
           <div 
             key={idx} 
@@ -81,9 +85,22 @@ export function AnnotatedArticle({
         if (highlight.text && !renderedText.includes(`>${highlight.text}</span>`)) {
           const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
+          
+          // Define color mapping for all highlight colors
+          const colorMap: Record<string, string> = {
+            yellow: '#fef08a',
+            green: '#86efac',
+            red: '#fca5a5',
+            blue: '#93c5fd',
+            orange: '#fdba74',
+            purple: '#d8b4fe'
+          };
+          
+          const bgColor = colorMap[highlight.color] || '#fef08a';
+          
           renderedText = renderedText.replace(
             regex,
-            `<mark class="highlight-${highlight.color}" style="background-color: ${highlight.color === 'yellow' ? '#fef08a' : '#86efac'}; padding: 2px 4px; border-radius: 2px;">${highlight.text}</mark>`
+            `<mark class="highlight-${highlight.color}" style="background-color: ${bgColor}; padding: 2px 4px; border-radius: 2px;">${highlight.text}</mark>`
           );
         }
       });
@@ -100,12 +117,14 @@ export function AnnotatedArticle({
         }
       });
 
-      // Apply underlines
+      // Apply underlines with proper styling
       itemAnnotations.filter(a => a.type === 'underline').forEach(annotation => {
         if (annotation.text) {
+          const escapedText = annotation.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
           renderedText = renderedText.replace(
-            annotation.text,
-            `<span class="underline-annotation">${annotation.text}</span>`
+            regex,
+            `<span class="underline-annotation" style="text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 2px; text-underline-offset: 3px;">${annotation.text}</span>`
           );
         }
       });
@@ -117,6 +136,21 @@ export function AnnotatedArticle({
           renderedText = renderedText.replace(
             annotation.text,
             `<span class="${colorClass}" data-note-text="${annotation.text}">${annotation.text}</span>`
+          );
+        }
+      });
+      
+      // Apply bookmark indicators with blue bookmark icon
+      itemBookmarks.forEach(bookmark => {
+        if (bookmark.text) {
+          const escapedText = bookmark.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
+          renderedText = renderedText.replace(
+            regex,
+            `<span class="relative inline-block">
+              <span class="bookmark-text" style="background-color: #dbeafe; padding: 2px 4px; border-radius: 2px; border-bottom: 2px solid #3b82f6;">${bookmark.text}</span>
+              <span class="inline-block ml-1 text-blue-600" style="vertical-align: middle;">🔖</span>
+            </span>`
           );
         }
       });
