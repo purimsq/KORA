@@ -38,13 +38,36 @@ Preferred communication style: Simple, everyday language.
 - Typewriter animation effect for article display
 - Offline-first architecture with local data persistence
 - Advanced annotation system:
-  - Color highlights (yellow/green) visible on text
-  - Bookmarks with scroll-to-position
-  - Thought clouds with visual indicators
-  - Sticky notes with 5 color options (yellow, pink, blue, green, purple)
-  - Text highlighting in sticky note colors for easy identification
-  - Click sticky note to scroll to associated text with pop animation
-  - Underline annotations
+  - Color highlights with 6 semantic colors:
+    * Yellow - General highlights
+    * Green - Definitions and key concepts
+    * Red - Important/critical information
+    * Blue - Data and statistics
+    * Orange - Methods and procedures
+    * Purple - Conclusions and findings
+  - Enhanced bookmarks with text-based tracking:
+    * Visual bookmark indicators (🔖) on bookmarked text
+    * Blue highlight for bookmarked content
+    * Full/partial bookmark states with visual indicators
+    * Replace existing bookmark functionality
+    * Scroll-to-position navigation
+  - White bubble thought clouds (hover-only display):
+    * Appears only on hover over highlighted text
+    * White cloud design with thought bubble tail
+    * Edit and save functionality
+    * Auto-dismisses when not hovering
+  - Realistic sticky notes sidebar:
+    * Visual pin design with rotation effects
+    * 5 color options (yellow, pink, blue, green, purple)
+    * Scrollable container for multiple notes
+    * Hide/minimize toggle
+    * Click note to scroll to associated text with pop animation
+    * Text highlighting in corresponding colors
+  - Underline annotations with blue styling (2px thick)
+- Scroll-to-top button:
+  * Appears after scrolling 300px
+  * Smooth scroll behavior
+  * Fixed bottom-right position
 - PDF export functionality using jsPDF
 - Responsive design with mobile support
 - Images displayed inline with text (first image floats right, text wraps)
@@ -78,13 +101,19 @@ Preferred communication style: Simple, everyday language.
 **Database Schema:**
 - `articles` - Temporary article cache from external sources
 - `downloads` - Permanently saved articles for offline access with images
-- `highlights` - Text highlights with color (yellow/green) visually displayed on text
-- `bookmarks` - Scroll position markers for quick navigation
+- `highlights` - Text highlights with 6 semantic colors (yellow/green/red/blue/orange/purple) visually displayed on text
+- `bookmarks` - Text-based bookmarks with scroll position navigation
+  - Stores bookmarked text for visual indicator display
+  - Tracks scroll position for navigation
+  - Supports full/partial bookmark states
 - `thoughts` - User's thought clouds with text and associated highlight
-- `annotations` - Sticky note annotations with color, content, and position tracking
+  - White bubble design with hover-only display
+  - Editable content with auto-save
+- `annotations` - Sticky note and underline annotations with color, content, and position tracking
   - Type: 'underline' or 'sticky_note'
   - Color: 'yellow', 'pink', 'blue', 'green', 'purple' (for sticky notes)
   - Position: Scroll position for navigation
+  - Visual pin design for sticky notes
 - `user_preferences` - Theme and font family settings
 
 **Data Persistence Strategy:**
