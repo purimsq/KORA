@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Highlight, Thought, Annotation } from "@shared/schema";
 import { ThoughtCloud } from "./ThoughtCloud";
 import { StickyNote } from "./StickyNote";
+import { formatContentWithAnnotations } from "@/lib/contentParser";
 
 interface AnnotatedArticleProps {
   content: string;
@@ -50,27 +51,45 @@ export function AnnotatedArticle({
     setActiveNote(note);
   };
 
-  // Render highlights
+  // Render content with proper formatting
   const renderContent = () => {
-    // For now, render plain content with highlights as colored spans
-    // In a full implementation, you'd parse the text and apply highlights
-    const paragraphs = content.split('\n\n');
+    const formattedContent = formatContentWithAnnotations(content);
     
-    return paragraphs.map((para, idx) => {
-      // Find highlights that match this paragraph
-      const paraHighlights = highlights.filter(h => h.text && para.includes(h.text));
-      const paraThoughts = thoughts.filter(t => t.highlightedText && para.includes(t.highlightedText));
-      const paraAnnotations = annotations.filter(a => a.text && para.includes(a.text));
+    return formattedContent.map((item, idx) => {
+      const itemText = item.text;
       
-      if (paraHighlights.length === 0 && paraThoughts.length === 0 && paraAnnotations.length === 0) {
-        return <p key={idx} className={`font-${fontFamily}`}>{para}</p>;
+      // Find highlights that match this content item
+      const itemHighlights = highlights.filter(h => h.text && itemText.includes(h.text));
+      const itemThoughts = thoughts.filter(t => t.highlightedText && itemText.includes(t.highlightedText));
+      const itemAnnotations = annotations.filter(a => a.text && itemText.includes(a.text));
+      
+      // For headings, render without annotations
+      if (item.type === 'heading' || item.type === 'subheading') {
+        return (
+          <div 
+            key={idx}
+            className={`font-${fontFamily}`}
+            dangerouslySetInnerHTML={{ __html: item.html }}
+          />
+        );
       }
 
-      // Render with highlights
-      let renderedText = para;
+      // For paragraphs, apply annotations if any exist
+      if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0) {
+        return (
+          <div 
+            key={idx} 
+            className={`font-${fontFamily}`}
+            dangerouslySetInnerHTML={{ __html: item.html }}
+          />
+        );
+      }
+
+      // Render with highlights and annotations
+      let renderedText = itemText;
       
       // Apply thought highlights (blue with dotted underline)
-      paraThoughts.forEach(thought => {
+      itemThoughts.forEach(thought => {
         if (thought.highlightedText) {
           renderedText = renderedText.replace(
             thought.highlightedText,
@@ -80,7 +99,7 @@ export function AnnotatedArticle({
       });
 
       // Apply color highlights
-      paraHighlights.forEach(highlight => {
+      itemHighlights.forEach(highlight => {
         if (highlight.text) {
           renderedText = renderedText.replace(
             highlight.text,
@@ -90,7 +109,7 @@ export function AnnotatedArticle({
       });
 
       // Apply underlines
-      paraAnnotations.filter(a => a.type === 'underline').forEach(annotation => {
+      itemAnnotations.filter(a => a.type === 'underline').forEach(annotation => {
         if (annotation.text) {
           renderedText = renderedText.replace(
             annotation.text,
@@ -100,7 +119,7 @@ export function AnnotatedArticle({
       });
 
       // Apply sticky note highlights with colors
-      paraAnnotations.filter(a => a.type === 'sticky_note').forEach(annotation => {
+      itemAnnotations.filter(a => a.type === 'sticky_note').forEach(annotation => {
         if (annotation.text && annotation.color) {
           const colorClass = `highlight-${annotation.color}`;
           renderedText = renderedText.replace(
@@ -113,12 +132,12 @@ export function AnnotatedArticle({
       return (
         <p 
           key={idx} 
-          className={`font-${fontFamily}`}
+          className={`font-${fontFamily} mb-4`}
           dangerouslySetInnerHTML={{ __html: renderedText }}
           onClick={(e) => {
             const target = e.target as HTMLElement;
             if (target.dataset.thoughtId) {
-              const thought = paraThoughts.find(t => t.id === target.dataset.thoughtId);
+              const thought = itemThoughts.find(t => t.id === target.dataset.thoughtId);
               if (thought) {
                 handleThoughtHover(thought, e as any);
               }

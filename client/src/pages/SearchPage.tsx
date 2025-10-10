@@ -10,6 +10,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { useCreateDownload } from "@/hooks/useDownloads";
 import type { SearchSuggestion } from "@shared/schema";
 import { saveSearchToHistory } from "@/lib/searchHistory";
+import { parseArticleContent } from "@/lib/contentParser";
 
 export default function SearchPage() {
   const [query, setQuery] = useState(() => {
@@ -218,6 +219,7 @@ export default function SearchPage() {
                       src={article.images[0].url} 
                       alt={article.images[0].caption || article.title}
                       className="w-full rounded-lg shadow-md"
+                      data-testid="img-article-0"
                     />
                     {article.images[0].caption && (
                       <p className="text-sm text-muted-foreground italic mt-2">
@@ -226,9 +228,14 @@ export default function SearchPage() {
                     )}
                   </div>
                 )}
-                <p data-testid="text-article-content">
-                  {isTyping ? typedContent : article.content}
-                </p>
+                <div 
+                  data-testid="text-article-content"
+                  dangerouslySetInnerHTML={{ 
+                    __html: isTyping 
+                      ? parseArticleContent(typedContent) 
+                      : parseArticleContent(article.content) 
+                  }}
+                />
                 {article.images && article.images.length > 1 && (
                   <div className="space-y-4 clear-both">
                     {article.images.slice(1).map((img: any, index: number) => (
@@ -237,6 +244,7 @@ export default function SearchPage() {
                           src={img.url} 
                           alt={img.caption || article.title}
                           className="w-full rounded-lg shadow-md"
+                          data-testid={`img-article-${index + 1}`}
                         />
                         {img.caption && (
                           <p className="text-sm text-muted-foreground italic mt-2">

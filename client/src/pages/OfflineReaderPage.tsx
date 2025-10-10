@@ -483,6 +483,7 @@ export default function OfflineReaderPage() {
                         src={img.url} 
                         alt={img.caption || article.title}
                         className="w-full rounded-lg shadow-md"
+                        data-testid={`img-article-${index + 1}`}
                       />
                       {img.caption && (
                         <p className="text-sm text-muted-foreground italic mt-2">
@@ -494,6 +495,21 @@ export default function OfflineReaderPage() {
                 </div>
               )}
             </div>
+            
+            {article.sourceUrl && (
+              <div className="mt-6 pt-6 border-t">
+                <a 
+                  href={article.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary hover:underline"
+                  data-testid="link-source"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Original Source
+                </a>
+              </div>
+            )}
           </article>
 
           {showToolbar && (
