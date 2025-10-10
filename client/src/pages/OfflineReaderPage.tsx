@@ -237,10 +237,11 @@ export default function OfflineReaderPage() {
   };
 
   const handleBookmark = () => {
+    const label = selection?.text ? selection.text.substring(0, 50) : 'Bookmark';
     createBookmark.mutate({
       downloadId,
       position: window.scrollY,
-      label: selection?.text.substring(0, 50),
+      label,
     }, {
       onSuccess: () => {
         toast({ title: "Bookmark Added" });
