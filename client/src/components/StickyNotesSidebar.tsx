@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, ChevronRight, ChevronLeft, Trash2, Edit2 } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Trash2, Edit2, Maximize2, Minimize2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Annotation } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ const STICKY_COLORS = [
 
 export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteNote }: StickyNotesSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
@@ -56,7 +57,7 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
       {/* Sidebar */}
       <div
         className={`fixed right-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-l shadow-xl transition-all duration-300 z-40 ${
-          isOpen ? 'w-80' : 'w-0'
+          isOpen ? (isMaximized ? 'w-[600px]' : 'w-80') : 'w-0'
         }`}
         data-testid="sticky-notes-sidebar"
       >
@@ -65,14 +66,25 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-semibold text-lg">Sticky Notes</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
-                data-testid="button-close-sticky-notes"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsMaximized(!isMaximized)}
+                  title={isMaximized ? "Minimize" : "Maximize"}
+                  data-testid="button-toggle-maximize-sticky-notes"
+                >
+                  {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsOpen(false)}
+                  data-testid="button-close-sticky-notes"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Notes list */}

@@ -129,27 +129,40 @@ export function AnnotatedArticle({
         }
       });
 
-      // Apply sticky note highlights with colors
+      // Apply sticky note highlights with colors matching the sticky note
       itemAnnotations.filter(a => a.type === 'sticky_note').forEach(annotation => {
         if (annotation.text && annotation.color) {
-          const colorClass = `highlight-${annotation.color}`;
+          const escapedText = annotation.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
+          
+          // Color mapping for sticky notes - match the sticky note background colors
+          const stickyColorMap: Record<string, string> = {
+            yellow: '#fef3c7',
+            pink: '#fce7f3',
+            blue: '#dbeafe',
+            green: '#dcfce7',
+            purple: '#f3e8ff'
+          };
+          
+          const bgColor = stickyColorMap[annotation.color] || '#fef3c7';
+          
           renderedText = renderedText.replace(
-            annotation.text,
-            `<span class="${colorClass}" data-note-text="${annotation.text}">${annotation.text}</span>`
+            regex,
+            `<span class="sticky-note-highlight" data-note-text="${annotation.text}" style="background-color: ${bgColor}; padding: 2px 6px; border-radius: 3px; border-left: 3px solid ${annotation.color === 'yellow' ? '#fbbf24' : annotation.color === 'pink' ? '#f472b6' : annotation.color === 'blue' ? '#60a5fa' : annotation.color === 'green' ? '#4ade80' : '#a78bfa'}; cursor: pointer;">${annotation.text}</span>`
           );
         }
       });
       
-      // Apply bookmark indicators with blue bookmark icon
+      // Apply bookmark indicators with blue highlight and bookmark icon
       itemBookmarks.forEach(bookmark => {
         if (bookmark.text) {
           const escapedText = bookmark.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
           renderedText = renderedText.replace(
             regex,
-            `<span class="relative inline-block">
-              <span class="bookmark-text" style="background-color: #dbeafe; padding: 2px 4px; border-radius: 2px; border-bottom: 2px solid #3b82f6;">${bookmark.text}</span>
-              <span class="inline-block ml-1 text-blue-600" style="vertical-align: middle;">🔖</span>
+            `<span class="relative inline-block bookmark-highlight" style="background-color: #dbeafe; padding: 2px 6px; border-radius: 3px; border-bottom: 3px solid #3b82f6; cursor: pointer;">
+              ${bookmark.text}
+              <span class="inline-block ml-1" style="vertical-align: middle; font-size: 1.1em;">🔖</span>
             </span>`
           );
         }
