@@ -156,7 +156,7 @@ export default function OfflineReaderPage() {
         downloadId,
         highlightedText: selection.text,
         text,
-        position: 0,
+        position: Math.floor(window.scrollY),
       }, {
         onSuccess: () => {
           toast({ title: "Thought Saved" });
@@ -188,7 +188,7 @@ export default function OfflineReaderPage() {
         text: selection.text,
         content,
         color,
-        position: window.scrollY,
+        position: Math.floor(window.scrollY),
       }, {
         onSuccess: () => {
           toast({ title: "Note Saved" });
@@ -242,7 +242,7 @@ export default function OfflineReaderPage() {
         downloadId,
         type: 'underline',
         text: selection.text,
-        position: 0,
+        position: Math.floor(window.scrollY),
       }, {
         onSuccess: () => {
           toast({ title: "Text Underlined" });
@@ -269,7 +269,7 @@ export default function OfflineReaderPage() {
     createBookmark.mutate({
       downloadId,
       text: selectedText,
-      position: window.scrollY,
+      position: Math.floor(window.scrollY),
       label,
     }, {
       onSuccess: () => {

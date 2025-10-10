@@ -783,7 +783,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const highlight = await storage.createHighlight(validatedData);
       res.json({ highlight });
     } catch (error) {
-      res.status(400).json({ error: 'Invalid highlight data' });
+      console.error('Highlight validation error:', error);
+      res.status(400).json({ error: 'Invalid highlight data', details: error });
     }
   });
 
@@ -812,7 +813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookmark = await storage.createBookmark(validatedData);
       res.json({ bookmark });
     } catch (error) {
-      res.status(400).json({ error: 'Invalid bookmark data' });
+      console.error('Bookmark validation error:', error);
+      res.status(400).json({ error: 'Invalid bookmark data', details: error });
     }
   });
 
@@ -883,7 +885,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const annotation = await storage.createAnnotation(validatedData);
       res.json({ annotation });
     } catch (error) {
-      res.status(400).json({ error: 'Invalid annotation data' });
+      console.error('Annotation validation error:', error);
+      res.status(400).json({ error: 'Invalid annotation data', details: error });
     }
   });
 
