@@ -203,14 +203,18 @@ export default function SearchPage() {
                 </p>
               )}
 
-              <div className="prose prose-lg max-w-none article-font space-y-6">
+              <div className="prose prose-lg max-w-none article-font space-y-6 overflow-hidden">
                 {article.images && article.images.length > 0 && (
-                  <div className="float-right ml-6 mb-4 w-full sm:w-1/2 animate-fade-in">
+                  <div className="float-right ml-6 mb-4 w-full sm:w-1/2 max-w-md animate-fade-in">
                     <img 
                       src={article.images[0].url} 
                       alt={article.images[0].caption || article.title}
-                      className="w-full rounded-lg shadow-md"
+                      className="w-full max-w-full h-auto rounded-lg shadow-md object-contain"
                       data-testid="img-article-0"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                     />
                     {article.images[0].caption && (
                       <p className="text-sm text-muted-foreground italic mt-2">
@@ -229,12 +233,16 @@ export default function SearchPage() {
                 {article.images && article.images.length > 1 && (
                   <div className="space-y-4 clear-both">
                     {article.images.slice(1).map((img: any, index: number) => (
-                      <div key={index + 1} className="animate-fade-in">
+                      <div key={index + 1} className="animate-fade-in max-w-3xl mx-auto">
                         <img 
                           src={img.url} 
                           alt={img.caption || article.title}
-                          className="w-full rounded-lg shadow-md"
+                          className="w-full max-w-full h-auto rounded-lg shadow-md object-contain"
                           data-testid={`img-article-${index + 1}`}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
                         />
                         {img.caption && (
                           <p className="text-sm text-muted-foreground italic mt-2">

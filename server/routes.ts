@@ -551,8 +551,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ddgData = response.data;
           const images: any[] = [];
           
-          if (ddgData.Image) {
+          // Get main image if available
+          if (ddgData.Image && ddgData.Image.trim() !== '') {
             images.push({ url: ddgData.Image, caption: ddgData.Heading || searchTitle });
+          }
+          
+          // Get images from related topics
+          if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
+            ddgData.RelatedTopics.slice(0, 5).forEach((topic: any) => {
+              if (topic.Icon && topic.Icon.URL && topic.Icon.URL.trim() !== '' && !topic.Icon.URL.includes('spacer.gif')) {
+                images.push({ 
+                  url: topic.Icon.URL, 
+                  caption: topic.Text ? topic.Text.split(' - ')[0] : searchTitle 
+                });
+              }
+            });
           }
           
           let content = ddgData.AbstractText || '';
