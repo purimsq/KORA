@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { HighlightToolbar } from "@/components/HighlightToolbar";
 import { ThoughtCloud } from "@/components/ThoughtCloud";
 import { StickyNote } from "@/components/StickyNote";
+import { StickyNotesSidebar } from "@/components/StickyNotesSidebar";
 import { AnnotatedArticle } from "@/components/AnnotatedArticle";
 import { 
   Download, 
@@ -561,6 +562,14 @@ export default function OfflineReaderPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Sticky Notes Sidebar */}
+      <StickyNotesSidebar
+        notes={annotations.filter(a => a.type === 'sticky_note')}
+        onNoteClick={handleNoteClick}
+        onUpdateNote={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
+        onDeleteNote={(id) => deleteAnnotation.mutate({ id, downloadId })}
+      />
     </div>
   );
 }
