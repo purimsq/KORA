@@ -154,11 +154,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `https://api.openalex.org/works`,
           {
             params: { 
-              search: q, 
+              filter: `title.search:${q}`,
               per_page: 5,
-              mailto: 'contact@example.com' // OpenAlex requests a mailto param
+              mailto: 'contact@example.com'
             },
-            timeout: 5000,
+            timeout: 10000,
           }
         );
 
@@ -178,7 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } catch (error) {
-        console.error('OpenAlex API error:', error);
+        // Silently continue without OpenAlex results if it fails
+        console.error('OpenAlex API error (continuing without results):', error instanceof Error ? error.message : 'Unknown error');
       }
 
       // Search Wikidata for entities
@@ -340,10 +341,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Fetch article details
-  app.get("/api/article/:source/:id", async (req, res) => {
+  // Fetch article details - use wildcard to handle IDs with slashes
+  app.get("/api/article/:source/*", async (req, res) => {
     try {
-      const { source, id } = req.params;
+      const { source } = req.params;
+      // Get the ID from the wildcard path (everything after :source/)
+      const id = (req.params as any)[0];
       const titleParam = req.query.title;
       const title = typeof titleParam === 'string' ? titleParam : undefined;
 
