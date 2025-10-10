@@ -72,33 +72,24 @@ export default function SearchPage() {
           data.article = data.download; // Normalize structure
         }
       } else {
-        // Fetch from external source
+        // Fetch from external source - encode ID to handle slashes and special characters
         const response = await fetch(
-          `/api/article/${suggestion.source}/${suggestion.id}?title=${encodeURIComponent(suggestion.title)}`
+          `/api/article/${suggestion.source}/${encodeURIComponent(suggestion.id)}?title=${encodeURIComponent(suggestion.title)}`
         );
         data = await response.json();
       }
       
       if (data.article) {
         setArticle(data.article);
-        setIsTyping(true);
+        setTypedContent(data.article.content); // Show full content immediately
+        setIsTyping(true); // Start scanning animation
         
-        // Typing animation
-        const content = data.article.content;
-        let index = 0;
-        const typeInterval = setInterval(() => {
-          if (index < content.length) {
-            setTypedContent(content.substring(0, index + 1));
-            index++;
-          } else {
-            clearInterval(typeInterval);
-            setIsTyping(false);
-            setShowPulse(true);
-            setTimeout(() => setShowPulse(false), 2000);
-          }
-        }, 15); // 15ms per character
-
-        return () => clearInterval(typeInterval);
+        // Scanning effect duration
+        setTimeout(() => {
+          setIsTyping(false);
+          setShowPulse(true);
+          setTimeout(() => setShowPulse(false), 2000);
+        }, 1500); // 1.5 second scanning effect
       }
     } catch (error) {
       toast({
@@ -230,10 +221,9 @@ export default function SearchPage() {
                 )}
                 <div 
                   data-testid="text-article-content"
+                  className={isTyping ? 'scanning-effect' : ''}
                   dangerouslySetInnerHTML={{ 
-                    __html: isTyping 
-                      ? parseArticleContent(typedContent) 
-                      : parseArticleContent(article.content) 
+                    __html: parseArticleContent(article.content)
                   }}
                 />
                 {article.images && article.images.length > 1 && (

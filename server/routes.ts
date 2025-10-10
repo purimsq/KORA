@@ -88,103 +88,249 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Search medRxiv/bioRxiv preprints
-      if (suggestions.length < 5) {
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-          
-          const medRxivResponse = await axios.get(
-            `https://api.biorxiv.org/details/medrxiv/${monthAgo}/${today}/0`,
-            { timeout: 5000 }
-          );
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        const medRxivResponse = await axios.get(
+          `https://api.biorxiv.org/details/medrxiv/${monthAgo}/${today}/0`,
+          { timeout: 5000 }
+        );
 
-          if (medRxivResponse.data?.collection) {
-            const filtered = medRxivResponse.data.collection
-              .filter((paper: any) => 
-                paper.title.toLowerCase().includes(q.toLowerCase()) ||
-                paper.abstract?.toLowerCase().includes(q.toLowerCase())
-              )
-              .slice(0, 3);
+        if (medRxivResponse.data?.collection) {
+          const filtered = medRxivResponse.data.collection
+            .filter((paper: any) => 
+              paper.title.toLowerCase().includes(q.toLowerCase()) ||
+              paper.abstract?.toLowerCase().includes(q.toLowerCase())
+            )
+            .slice(0, 3);
 
-            filtered.forEach((paper: any) => {
-              const isDownloaded = localDownloads.some(d => d.title === paper.title);
-              if (!suggestions.find(s => s.title === paper.title)) {
-                suggestions.push({
-                  id: paper.doi,
-                  title: paper.title,
-                  source: 'medrxiv',
-                  isDownloaded,
-                });
-              }
-            });
-          }
-        } catch (error) {
-          console.error('medRxiv API error:', error);
+          filtered.forEach((paper: any) => {
+            const isDownloaded = localDownloads.some(d => d.title === paper.title);
+            if (!suggestions.find(s => s.title === paper.title)) {
+              suggestions.push({
+                id: paper.doi,
+                title: paper.title,
+                source: 'medrxiv',
+                isDownloaded,
+              });
+            }
+          });
         }
+      } catch (error) {
+        console.error('medRxiv API error:', error);
       }
 
       // Search Semantic Scholar
-      if (suggestions.length < 5) {
-        try {
-          const semanticResponse = await axios.get(
-            `https://api.semanticscholar.org/graph/v1/paper/search`,
-            {
-              params: { query: q, limit: 5, fields: 'title,abstract,authors,url' },
-              timeout: 5000,
-            }
-          );
+      try {
+        const semanticResponse = await axios.get(
+          `https://api.semanticscholar.org/graph/v1/paper/search`,
+          {
+            params: { query: q, limit: 5, fields: 'title,abstract,authors,url' },
+            timeout: 5000,
+          }
+        );
 
-          if (semanticResponse.data?.data) {
-            semanticResponse.data.data.forEach((paper: any) => {
-              const isDownloaded = localDownloads.some(d => d.title === paper.title);
-              if (!suggestions.find(s => s.title === paper.title)) {
+        if (semanticResponse.data?.data) {
+          semanticResponse.data.data.forEach((paper: any) => {
+            const isDownloaded = localDownloads.some(d => d.title === paper.title);
+            if (!suggestions.find(s => s.title === paper.title)) {
+              suggestions.push({
+                id: paper.paperId || `semantic-${Date.now()}-${Math.random()}`,
+                title: paper.title,
+                source: 'semantic_scholar',
+                isDownloaded,
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Semantic Scholar API error:', error);
+      }
+
+      // Search OpenAlex for scientific papers
+      try {
+        const openAlexResponse = await axios.get(
+          `https://api.openalex.org/works`,
+          {
+            params: { 
+              search: q, 
+              per_page: 5,
+              mailto: 'contact@example.com' // OpenAlex requests a mailto param
+            },
+            timeout: 5000,
+          }
+        );
+
+        if (openAlexResponse.data?.results) {
+          openAlexResponse.data.results.forEach((work: any) => {
+            if (work.title) {
+              const isDownloaded = localDownloads.some(d => d.title === work.title);
+              if (!suggestions.find(s => s.title === work.title)) {
                 suggestions.push({
-                  id: paper.paperId || `semantic-${Date.now()}-${Math.random()}`,
-                  title: paper.title,
-                  source: 'semantic_scholar',
+                  id: work.id || `openalex-${Date.now()}-${Math.random()}`,
+                  title: work.title,
+                  source: 'openalex',
                   isDownloaded,
                 });
               }
-            });
-          }
-        } catch (error) {
-          console.error('Semantic Scholar API error:', error);
+            }
+          });
         }
+      } catch (error) {
+        console.error('OpenAlex API error:', error);
       }
 
-      // Fallback to Wikipedia if not enough results
-      if (suggestions.length < 3) {
-        try {
-          const wikiResponse = await axios.get(
-            `https://en.wikipedia.org/w/api.php`,
-            {
-              params: {
-                action: 'opensearch',
-                search: q,
-                limit: 5,
-                namespace: 0,
-                format: 'json',
-              },
-              timeout: 5000,
-            }
-          );
+      // Search Wikidata for entities
+      try {
+        const wikidataResponse = await axios.get(
+          `https://www.wikidata.org/w/api.php`,
+          {
+            params: {
+              action: 'wbsearchentities',
+              search: q,
+              language: 'en',
+              format: 'json',
+              limit: 5,
+            },
+            timeout: 5000,
+          }
+        );
 
-          if (wikiResponse.data && Array.isArray(wikiResponse.data[1])) {
-            wikiResponse.data[1].forEach((title: string) => {
+        if (wikidataResponse.data?.search) {
+          wikidataResponse.data.search.forEach((entity: any) => {
+            if (entity.label) {
+              const title = `${entity.label}${entity.description ? ` - ${entity.description}` : ''}`;
               const isDownloaded = localDownloads.some(d => d.title === title);
               if (!suggestions.find(s => s.title === title)) {
                 suggestions.push({
-                  id: `wiki-${Date.now()}-${Math.random()}`,
+                  id: entity.id || `wikidata-${Date.now()}-${Math.random()}`,
                   title,
-                  source: 'wikipedia',
+                  source: 'wikidata',
                   isDownloaded,
                 });
               }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Wikidata API error:', error);
+      }
+
+      // Search DuckDuckGo Instant Answers
+      try {
+        const ddgResponse = await axios.get(
+          `https://api.duckduckgo.com/`,
+          {
+            params: {
+              q,
+              format: 'json',
+              no_html: 1,
+              skip_disambig: 1,
+            },
+            timeout: 5000,
+          }
+        );
+
+        if (ddgResponse.data) {
+          const ddgData = ddgResponse.data;
+          
+          // Add main result if available
+          if (ddgData.AbstractText && ddgData.Heading) {
+            const isDownloaded = localDownloads.some(d => d.title === ddgData.Heading);
+            if (!suggestions.find(s => s.title === ddgData.Heading)) {
+              suggestions.push({
+                id: `ddg-main-${Date.now()}`,
+                title: ddgData.Heading,
+                source: 'duckduckgo',
+                isDownloaded,
+              });
+            }
+          }
+
+          // Add related topics
+          if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
+            ddgData.RelatedTopics.slice(0, 3).forEach((topic: any) => {
+              if (topic.Text && topic.FirstURL) {
+                const title = topic.Text.split(' - ')[0];
+                const isDownloaded = localDownloads.some(d => d.title === title);
+                if (!suggestions.find(s => s.title === title)) {
+                  suggestions.push({
+                    id: `ddg-${Date.now()}-${Math.random()}`,
+                    title,
+                    source: 'duckduckgo',
+                    isDownloaded,
+                  });
+                }
+              }
             });
           }
-        } catch (error) {
-          console.error('Wikipedia API error:', error);
         }
+      } catch (error) {
+        console.error('DuckDuckGo API error:', error);
+      }
+
+      // Search Open Library for books
+      try {
+        const openLibResponse = await axios.get(
+          `https://openlibrary.org/search.json`,
+          {
+            params: { q, limit: 5 },
+            timeout: 5000,
+          }
+        );
+
+        if (openLibResponse.data?.docs) {
+          openLibResponse.data.docs.forEach((book: any) => {
+            if (book.title) {
+              const title = `${book.title}${book.author_name ? ` by ${book.author_name[0]}` : ''}`;
+              const isDownloaded = localDownloads.some(d => d.title === title);
+              if (!suggestions.find(s => s.title === title)) {
+                suggestions.push({
+                  id: book.key || `openlib-${Date.now()}-${Math.random()}`,
+                  title,
+                  source: 'openlibrary',
+                  isDownloaded,
+                });
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Open Library API error:', error);
+      }
+
+      // Search Wikipedia
+      try {
+        const wikiResponse = await axios.get(
+          `https://en.wikipedia.org/w/api.php`,
+          {
+            params: {
+              action: 'opensearch',
+              search: q,
+              limit: 5,
+              namespace: 0,
+              format: 'json',
+            },
+            timeout: 5000,
+          }
+        );
+
+        if (wikiResponse.data && Array.isArray(wikiResponse.data[1])) {
+          wikiResponse.data[1].forEach((title: string) => {
+            const isDownloaded = localDownloads.some(d => d.title === title);
+            if (!suggestions.find(s => s.title === title)) {
+              suggestions.push({
+                id: `wiki-${Date.now()}-${Math.random()}`,
+                title,
+                source: 'wikipedia',
+                isDownloaded,
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Wikipedia API error:', error);
       }
 
       res.json({ suggestions });
@@ -198,7 +344,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/article/:source/:id", async (req, res) => {
     try {
       const { source, id } = req.params;
-      const { title } = req.query;
+      const titleParam = req.query.title;
+      const title = typeof titleParam === 'string' ? titleParam : undefined;
 
       let articleData: any = null;
 
@@ -292,20 +439,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
             images: [],
           };
         }
+      } else if (source === 'openalex') {
+        // Fetch from OpenAlex - id is URL-decoded by Express
+        const openAlexId = id.startsWith('http') ? id : id.startsWith('W') ? `https://api.openalex.org/works/${id}` : `https://api.openalex.org/works/${id}`;
+        const response = await axios.get(
+          openAlexId,
+          {
+            params: { mailto: 'contact@example.com' },
+            timeout: 10000,
+          }
+        );
+
+        if (response.data) {
+          const work = response.data;
+          articleData = {
+            title: work.title || title || 'Untitled',
+            content: work.abstract_inverted_index ? 
+              Object.entries(work.abstract_inverted_index)
+                .flatMap(([word, positions]: [string, any]) => 
+                  (positions as number[]).map(pos => ({ word, pos }))
+                )
+                .sort((a, b) => a.pos - b.pos)
+                .map(item => item.word)
+                .join(' ') 
+              : 'Full text not available.',
+            abstract: work.abstract_inverted_index ? 
+              Object.keys(work.abstract_inverted_index).slice(0, 30).join(' ') + '...' 
+              : 'Abstract not available.',
+            authors: work.authorships?.map((a: any) => a.author?.display_name).filter(Boolean) || [],
+            source: 'openalex',
+            sourceUrl: work.doi ? `https://doi.org/${work.doi.replace('https://doi.org/', '')}` : work.id,
+            category: 'scientific',
+            images: [],
+          };
+        }
+      } else if (source === 'wikidata') {
+        // Fetch from Wikidata
+        const entityId = id.replace('wikidata-', '').split('-')[0];
+        
+        const response = await axios.get(
+          `https://www.wikidata.org/w/api.php`,
+          {
+            params: {
+              action: 'wbgetentities',
+              ids: entityId,
+              props: 'labels|descriptions|claims|sitelinks',
+              languages: 'en',
+              format: 'json',
+            },
+            timeout: 10000,
+          }
+        );
+
+        if (response.data?.entities?.[entityId]) {
+          const entity = response.data.entities[entityId];
+          const label = entity.labels?.en?.value || 'Unknown';
+          const description = entity.descriptions?.en?.value || '';
+          
+          // Build content from claims
+          let content = description + '\n\n';
+          
+          // Get Wikipedia link if available
+          let sourceUrl = `https://www.wikidata.org/wiki/${entityId}`;
+          if (entity.sitelinks?.enwiki) {
+            sourceUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(entity.sitelinks.enwiki.title)}`;
+          }
+          
+          // Get image if available
+          const images: any[] = [];
+          if (entity.claims?.P18) {
+            const imageClaim = entity.claims.P18[0];
+            if (imageClaim?.mainsnak?.datavalue?.value) {
+              const imageFilename = imageClaim.mainsnak.datavalue.value.replace(/ /g, '_');
+              const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageFilename)}`;
+              images.push({ url: imageUrl, caption: label });
+            }
+          }
+          
+          articleData = {
+            title: label,
+            content: content || description || 'No detailed information available.',
+            abstract: description,
+            authors: [],
+            source: 'wikidata',
+            sourceUrl,
+            category: 'encyclopedia',
+            images,
+          };
+        }
+      } else if (source === 'duckduckgo') {
+        // Fetch from DuckDuckGo
+        const searchTitle = title || id.replace('ddg-main-', '').replace(/^ddg-\d+-[\d.]+$/, title || 'search');
+        
+        const response = await axios.get(
+          `https://api.duckduckgo.com/`,
+          {
+            params: {
+              q: searchTitle,
+              format: 'json',
+              no_html: 1,
+              skip_disambig: 1,
+            },
+            timeout: 10000,
+          }
+        );
+
+        if (response.data) {
+          const ddgData = response.data;
+          const images: any[] = [];
+          
+          if (ddgData.Image) {
+            images.push({ url: ddgData.Image, caption: ddgData.Heading || searchTitle });
+          }
+          
+          let content = ddgData.AbstractText || '';
+          
+          // Add related topics as additional content
+          if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
+            content += '\n\n===Related Topics===\n\n';
+            ddgData.RelatedTopics.slice(0, 10).forEach((topic: any) => {
+              if (topic.Text) {
+                content += topic.Text + '\n\n';
+              }
+            });
+          }
+          
+          articleData = {
+            title: ddgData.Heading || searchTitle,
+            content: content || 'No content available.',
+            abstract: ddgData.AbstractText?.substring(0, 200) + '...' || '',
+            authors: [],
+            source: 'duckduckgo',
+            sourceUrl: ddgData.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(searchTitle)}`,
+            category: 'general',
+            images,
+          };
+        }
+      } else if (source === 'openlibrary') {
+        // Fetch from Open Library - id is URL-decoded by Express
+        const bookKey = id.startsWith('/works/') ? id : id.startsWith('OL') ? `/works/${id}` : id;
+        
+        const response = await axios.get(
+          `https://openlibrary.org${bookKey}.json`,
+          { timeout: 10000 }
+        );
+
+        if (response.data) {
+          const book = response.data;
+          const images: any[] = [];
+          
+          // Get book cover
+          if (book.covers && book.covers[0]) {
+            images.push({ 
+              url: `https://covers.openlibrary.org/b/id/${book.covers[0]}-L.jpg`,
+              caption: book.title 
+            });
+          }
+          
+          let content = book.description;
+          if (typeof content === 'object' && content.value) {
+            content = content.value;
+          }
+          
+          // Add book details
+          if (!content) content = '';
+          if (book.first_publish_date) {
+            content += `\n\n===Publication===\nFirst published: ${book.first_publish_date}`;
+          }
+          if (book.subjects) {
+            content += `\n\n===Subjects===\n${book.subjects.slice(0, 10).join(', ')}`;
+          }
+          
+          articleData = {
+            title: book.title || title || 'Untitled',
+            content: content || 'No description available.',
+            abstract: typeof book.description === 'string' ? 
+              book.description.substring(0, 200) + '...' : 
+              'No description available.',
+            authors: book.authors?.map((a: any) => a.name || a.author?.name).filter(Boolean) || [],
+            source: 'openlibrary',
+            sourceUrl: `https://openlibrary.org${bookKey}`,
+            category: 'literature',
+            images,
+          };
+        }
       } else if (source === 'wikipedia') {
         // Fetch from Wikipedia
-        const searchTitle = title || id;
+        const searchTitle = title || id.replace('wiki-', '').replace(/\d+-[\d.]+$/, title || 'search');
         
-        // Get page content - remove exintro to get full article
+        // Get page content with all images
         const contentResponse = await axios.get(
           `https://en.wikipedia.org/w/api.php`,
           {
             params: {
               action: 'query',
               titles: searchTitle,
-              prop: 'extracts|pageimages',
+              prop: 'extracts|images|pageimages',
               explaintext: true,
-              piprop: 'original',
+              pithumbsize: 500,
               format: 'json',
             },
             timeout: 10000,
@@ -317,7 +648,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (pageId && pages[pageId]) {
           const page = pages[pageId];
-          const images = page.original ? [{ url: page.original.source, caption: searchTitle }] : [];
+          const images: any[] = [];
+          
+          // Get all images from the page
+          if (page.images && Array.isArray(page.images)) {
+            for (const img of page.images.slice(0, 10)) {
+              try {
+                const imgResponse = await axios.get(
+                  `https://en.wikipedia.org/w/api.php`,
+                  {
+                    params: {
+                      action: 'query',
+                      titles: img.title,
+                      prop: 'imageinfo',
+                      iiprop: 'url',
+                      format: 'json',
+                    },
+                    timeout: 5000,
+                  }
+                );
+                
+                const imgPages = imgResponse.data?.query?.pages;
+                const imgPageId = Object.keys(imgPages || {})[0];
+                if (imgPageId && imgPages[imgPageId]?.imageinfo?.[0]?.url) {
+                  const url = imgPages[imgPageId].imageinfo[0].url;
+                  // Filter out icons and small images
+                  if (!url.includes('Icon') && !url.includes('icon') && !url.endsWith('.svg')) {
+                    images.push({ url, caption: img.title.replace('File:', '') });
+                  }
+                }
+              } catch (imgError) {
+                console.error('Error fetching image:', imgError);
+              }
+            }
+          }
           
           articleData = {
             title: page.title,
