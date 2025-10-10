@@ -70,6 +70,7 @@ export const annotations = pgTable("annotations", {
   type: text("type").notNull(), // 'underline' | 'sticky_note'
   text: text("text").notNull(), // The annotated text
   content: text("content"), // For sticky notes
+  color: text("color"), // Color for sticky notes: 'yellow' | 'pink' | 'blue' | 'green' | 'purple'
   position: integer("position").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

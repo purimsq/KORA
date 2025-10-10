@@ -96,6 +96,7 @@ export function initializeDatabase() {
       type TEXT NOT NULL,
       text TEXT NOT NULL,
       content TEXT,
+      color TEXT,
       position INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
       FOREIGN KEY (download_id) REFERENCES downloads(id) ON DELETE CASCADE

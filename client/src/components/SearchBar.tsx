@@ -16,6 +16,7 @@ interface SearchBarProps {
 export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoading, initialQuery = "" }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
   const [showSuggestions, setShowSuggestions] = useState(initialQuery.length > 2 && suggestions.length > 0);
+  const [suggestionSelected, setSuggestionSelected] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Update query when initialQuery prop changes
@@ -26,16 +27,18 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
   }, [initialQuery]);
 
   useEffect(() => {
-    if (query.length > 2) {
+    // Only auto-show suggestions if a suggestion wasn't just selected
+    if (!suggestionSelected && query.length > 2 && suggestions.length > 0) {
       setShowSuggestions(true);
-    } else {
+    } else if (query.length <= 2) {
       setShowSuggestions(false);
     }
-  }, [query]);
+  }, [query, suggestions.length, suggestionSelected]);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
+    setSuggestionSelected(false); // Reset when user types
     onSearch(newQuery);
   };
 
@@ -49,7 +52,8 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     setQuery(suggestion.title);
-    setShowSuggestions(false);
+    setSuggestionSelected(true); // Mark that a suggestion was selected
+    setShowSuggestions(false); // Immediately close suggestions
     if (onSuggestionClick) {
       onSuggestionClick(suggestion);
     }
@@ -57,12 +61,14 @@ export function SearchBar({ onSearch, onSuggestionClick, suggestions = [], isLoa
 
   const clearSearch = () => {
     setQuery("");
+    setSuggestionSelected(false); // Reset when clearing
     onSearch("");
     setShowSuggestions(false);
     inputRef.current?.focus();
   };
 
   const handleInputFocus = () => {
+    setSuggestionSelected(false); // Reset when focusing input
     if (query.length > 2 && suggestions.length > 0) {
       setShowSuggestions(true);
     }

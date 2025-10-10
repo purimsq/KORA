@@ -305,14 +305,15 @@ export class SQLiteStorage implements IStorage {
     const now = Date.now();
     
     db.prepare(`
-      INSERT INTO annotations (id, download_id, type, text, content, position, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO annotations (id, download_id, type, text, content, color, position, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       annotation.downloadId,
       annotation.type,
       annotation.text,
       annotation.content || null,
+      annotation.color || null,
       annotation.position,
       now
     );

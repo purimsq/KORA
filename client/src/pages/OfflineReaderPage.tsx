@@ -162,19 +162,73 @@ export default function OfflineReaderPage() {
     }
   };
 
-  const handleSaveNote = (content: string) => {
+  const handleSaveNote = (content: string, color: string) => {
     if (selection) {
       createAnnotation.mutate({
         downloadId,
         type: 'sticky_note',
         text: selection.text,
         content,
-        position: 0,
+        color,
+        position: window.scrollY,
       }, {
         onSuccess: () => {
           toast({ title: "Note Saved" });
           setStickyNote(null);
           setSelection(null);
+        },
+      });
+    }
+  };
+
+  const handleNoteClick = (noteText: string) => {
+    // Find the text in the article
+    const articleContent = document.querySelector('[data-testid="article-content"]');
+    if (articleContent && noteText) {
+      const textNodes: Text[] = [];
+      const walker = document.createTreeWalker(
+        articleContent,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      
+      let node;
+      while ((node = walker.nextNode())) {
+        textNodes.push(node as Text);
+      }
+      
+      // Find the node containing the text
+      for (const textNode of textNodes) {
+        if (textNode.textContent?.includes(noteText)) {
+          const parent = textNode.parentElement;
+          if (parent) {
+            // Scroll to the element
+            parent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add pop effect
+            parent.classList.add('animate-pulse');
+            setTimeout(() => {
+              parent.classList.remove('animate-pulse');
+            }, 1000);
+            
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  const handleUnderline = () => {
+    if (selection) {
+      createAnnotation.mutate({
+        downloadId,
+        type: 'underline',
+        text: selection.text,
+        position: 0,
+      }, {
+        onSuccess: () => {
+          toast({ title: "Text Underlined" });
+          setShowToolbar(false);
         },
       });
     }
@@ -394,17 +448,52 @@ export default function OfflineReaderPage() {
                 By {article.authors.join(', ')}
               </p>
             )}
-            <AnnotatedArticle
-              content={article.content}
-              highlights={highlights}
-              thoughts={thoughts}
-              annotations={annotations}
-              fontFamily={fontFamily}
-              onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
-              onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
-              onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
-              onDeleteAnnotation={(id) => deleteAnnotation.mutate({ id, downloadId })}
-            />
+            <div className="space-y-6">
+              {article.images && article.images.length > 0 && (
+                <div className="float-right ml-6 mb-4 w-full sm:w-1/2">
+                  <img 
+                    src={article.images[0].url} 
+                    alt={article.images[0].caption || article.title}
+                    className="w-full rounded-lg shadow-md"
+                  />
+                  {article.images[0].caption && (
+                    <p className="text-sm text-muted-foreground italic mt-2">
+                      {article.images[0].caption}
+                    </p>
+                  )}
+                </div>
+              )}
+              <AnnotatedArticle
+                content={article.content}
+                highlights={highlights}
+                thoughts={thoughts}
+                annotations={annotations}
+                fontFamily={fontFamily}
+                onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
+                onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
+                onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
+                onDeleteAnnotation={(id) => deleteAnnotation.mutate({ id, downloadId })}
+                onNoteClick={handleNoteClick}
+              />
+              {article.images && article.images.length > 1 && (
+                <div className="space-y-4 clear-both">
+                  {article.images.slice(1).map((img: any, index: number) => (
+                    <div key={index + 1}>
+                      <img 
+                        src={img.url} 
+                        alt={img.caption || article.title}
+                        className="w-full rounded-lg shadow-md"
+                      />
+                      {img.caption && (
+                        <p className="text-sm text-muted-foreground italic mt-2">
+                          {img.caption}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </article>
 
           {showToolbar && (
@@ -412,7 +501,7 @@ export default function OfflineReaderPage() {
               position={toolbarPosition}
               onHighlight={handleHighlight}
               onAddThought={handleAddThought}
-              onUnderline={() => toast({ title: "Underlined" })}
+              onUnderline={handleUnderline}
               onAddNote={handleAddNote}
               onBookmark={handleBookmark}
             />

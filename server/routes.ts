@@ -248,9 +248,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       } else if (source === 'medrxiv') {
-        // Fetch from medRxiv
+        // Fetch from medRxiv - id is the DOI
         const response = await axios.get(
-          `https://api.biorxiv.org/details/medrxiv/${id}`,
+          `https://api.biorxiv.org/details/medrxiv/${encodeURIComponent(id)}`,
           { timeout: 10000 }
         );
 
@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch from Wikipedia
         const searchTitle = title || id;
         
-        // Get page content
+        // Get page content - remove exintro to get full article
         const contentResponse = await axios.get(
           `https://en.wikipedia.org/w/api.php`,
           {
@@ -304,7 +304,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               action: 'query',
               titles: searchTitle,
               prop: 'extracts|pageimages',
-              exintro: true,
               explaintext: true,
               piprop: 'original',
               format: 'json',

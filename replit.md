@@ -33,12 +33,21 @@ Preferred communication style: Simple, everyday language.
 - Custom hooks for domain-specific logic (useSearch, useDownloads, useAnnotations, usePreferences)
 
 **Key Features:**
-- Real-time search with suggestions from multiple sources
+- Real-time search with suggestions from multiple sources (PubMed, medRxiv, Semantic Scholar, Wikipedia)
+- Full article content fetching (not just abstracts)
 - Typewriter animation effect for article display
 - Offline-first architecture with local data persistence
-- Advanced annotation system (highlights, bookmarks, thought clouds, sticky notes)
+- Advanced annotation system:
+  - Color highlights (yellow/green) visible on text
+  - Bookmarks with scroll-to-position
+  - Thought clouds with visual indicators
+  - Sticky notes with 5 color options (yellow, pink, blue, green, purple)
+  - Text highlighting in sticky note colors for easy identification
+  - Click sticky note to scroll to associated text with pop animation
+  - Underline annotations
 - PDF export functionality using jsPDF
 - Responsive design with mobile support
+- Images displayed inline with text (first image floats right, text wraps)
 
 ### Backend Architecture
 
@@ -68,11 +77,14 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema:**
 - `articles` - Temporary article cache from external sources
-- `downloads` - Permanently saved articles for offline access
-- `highlights` - Text highlights with color (yellow/green) and position tracking
+- `downloads` - Permanently saved articles for offline access with images
+- `highlights` - Text highlights with color (yellow/green) visually displayed on text
 - `bookmarks` - Scroll position markers for quick navigation
 - `thoughts` - User's thought clouds with text and associated highlight
-- `annotations` - Sticky note annotations with position tracking
+- `annotations` - Sticky note annotations with color, content, and position tracking
+  - Type: 'underline' or 'sticky_note'
+  - Color: 'yellow', 'pink', 'blue', 'green', 'purple' (for sticky notes)
+  - Position: Scroll position for navigation
 - `user_preferences` - Theme and font family settings
 
 **Data Persistence Strategy:**

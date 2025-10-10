@@ -398,4 +398,35 @@
     border-bottom: 2px solid hsl(var(--primary));
     cursor: pointer;
   }
+
+  /* Sticky note highlight colors */
+  .highlight-pink {
+    background-color: rgba(236, 72, 153, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-pink:hover {
+    background-color: rgba(236, 72, 153, 0.5);
+  }
+
+  .highlight-blue {
+    background-color: rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-blue:hover {
+    background-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .highlight-purple {
+    background-color: rgba(168, 85, 247, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-purple:hover {
+    background-color: rgba(168, 85, 247, 0.5);
+  }
 }
