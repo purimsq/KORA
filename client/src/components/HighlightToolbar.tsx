@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Highlighter, MessageCircle, Underline as UnderlineIcon, StickyNote, Bookmark, Trash2 } from "lucide-react";
+import { Highlighter, MessageCircle, Underline as UnderlineIcon, StickyNote, Trash2 } from "lucide-react";
 
 interface HighlightToolbarProps {
   position: { top: number; left: number };
@@ -8,10 +8,8 @@ interface HighlightToolbarProps {
   onAddThought: () => void;
   onUnderline: () => void;
   onAddNote: () => void;
-  onBookmark: () => void;
   onRemove?: () => void;
   hasAnnotation?: boolean;
-  hasBookmark?: 'none' | 'partial' | 'full';
 }
 
 export function HighlightToolbar({ 
@@ -20,10 +18,8 @@ export function HighlightToolbar({
   onAddThought, 
   onUnderline, 
   onAddNote, 
-  onBookmark,
   onRemove,
-  hasAnnotation,
-  hasBookmark 
+  hasAnnotation
 }: HighlightToolbarProps) {
   return (
     <Card 
@@ -132,19 +128,6 @@ export function HighlightToolbar({
           data-testid="button-sticky-note"
         >
           <StickyNote className="w-4 h-4" />
-        </Button>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onBookmark}
-          title={hasBookmark === 'full' ? 'Bookmark (already bookmarked)' : hasBookmark === 'partial' ? 'Bookmark (partially bookmarked)' : 'Bookmark'}
-          data-testid="button-bookmark"
-          className={hasBookmark === 'full' ? 'text-blue-600' : hasBookmark === 'partial' ? 'text-blue-400' : ''}
-        >
-          <Bookmark 
-            className={`w-4 h-4 ${hasBookmark === 'full' ? 'fill-blue-600' : hasBookmark === 'partial' ? 'fill-blue-400' : ''}`}
-          />
         </Button>
 
         {hasAnnotation && onRemove && (

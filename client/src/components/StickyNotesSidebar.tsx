@@ -11,6 +11,7 @@ interface StickyNotesSidebarProps {
   onNoteClick: (text: string) => void;
   onUpdateNote: (id: string, content: string) => void;
   onDeleteNote: (id: string) => void;
+  highlightedNoteId?: string | null;
 }
 
 const STICKY_COLORS = [
@@ -21,11 +22,16 @@ const STICKY_COLORS = [
   { name: 'purple', bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-gray-800', shadow: 'shadow-purple-200' },
 ];
 
-export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteNote }: StickyNotesSidebarProps) {
+export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteNote, highlightedNoteId }: StickyNotesSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+
+  // Auto-open sidebar when a note is highlighted
+  if (highlightedNoteId && !isOpen) {
+    setIsOpen(true);
+  }
 
   const handleEdit = (note: Annotation) => {
     setEditingNoteId(note.id);
@@ -100,7 +106,8 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                   return (
                     <Card
                       key={note.id}
-                      className={`relative p-4 ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text} border-t-4 shadow-xl hover:shadow-2xl transition-all cursor-pointer transform ${rotation} ${hoverRotation}`}
+                      id={`sticky-note-${note.id}`}
+                      className={`relative p-4 ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text} border-t-4 shadow-xl hover:shadow-2xl transition-all cursor-pointer transform ${rotation} ${hoverRotation} ${highlightedNoteId === note.id ? 'animate-bounce ring-4 ring-primary' : ''}`}
                       style={{ 
                         minHeight: '140px',
                         maxHeight: '200px',

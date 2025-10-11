@@ -6,9 +6,9 @@ import { ThoughtCloud } from "@/components/ThoughtCloud";
 import { StickyNote } from "@/components/StickyNote";
 import { StickyNotesSidebar } from "@/components/StickyNotesSidebar";
 import { AnnotatedArticle } from "@/components/AnnotatedArticle";
+import { TableOfContents } from "@/components/TableOfContents";
 import { 
   Download, 
-  Bookmark as BookmarkIcon, 
   RotateCcw, 
   Search as SearchIcon,
   ChevronDown,
@@ -27,11 +27,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useDownload } from "@/hooks/useDownloads";
 import { 
   useHighlights,
-  useBookmarks,
   useThoughts,
   useAnnotations,
   useCreateHighlight, 
-  useCreateBookmark, 
   useCreateThought, 
   useCreateAnnotation,
   useUpdateThought,
@@ -65,6 +63,7 @@ export default function OfflineReaderPage() {
   const [searchText, setSearchText] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
   
   const { toast } = useToast();
   
@@ -84,11 +83,9 @@ export default function OfflineReaderPage() {
   const { data, isLoading } = useDownload(downloadId);
   const { data: prefsData } = usePreferences();
   const { data: highlightsData } = useHighlights(downloadId);
-  const { data: bookmarksData } = useBookmarks(downloadId);
   const { data: thoughtsData } = useThoughts(downloadId);
   const { data: annotationsData } = useAnnotations(downloadId);
   const createHighlight = useCreateHighlight();
-  const createBookmark = useCreateBookmark();
   const createThought = useCreateThought();
   const createAnnotation = useCreateAnnotation();
   const updateThought = useUpdateThought();
@@ -99,9 +96,9 @@ export default function OfflineReaderPage() {
   const article = data?.download;
   const fontFamily = prefsData?.preferences?.fontFamily || 'sans';
   const highlights = highlightsData?.highlights || [];
-  const bookmarks = bookmarksData?.bookmarks || [];
   const thoughts = thoughtsData?.thoughts || [];
   const annotations = annotationsData?.annotations || [];
+  const stickyNotes = annotations.filter(a => a.type === 'sticky_note');
 
   const handleTextSelection = () => {
     const sel = window.getSelection();
@@ -252,57 +249,26 @@ export default function OfflineReaderPage() {
     }
   };
 
-  const handleBookmark = () => {
-    if (!selection) return;
+  const handleStickyNoteTextClick = (noteText: string) => {
+    // Find the sticky note by its text
+    const note = stickyNotes.find(n => n.text === noteText);
+    if (!note) return;
     
-    const selectedText = selection.text;
-    const label = selectedText.substring(0, 50);
+    // Highlight the note
+    setHighlightedNoteId(note.id);
     
-    // Check if there's an existing bookmark with this text (replace functionality)
-    const existingBookmark = bookmarks.find(b => b.text === selectedText);
-    
-    if (existingBookmark) {
-      // Replace: delete old bookmark and create new one at current position
-      toast({ title: "Bookmark Updated", description: "Replaced existing bookmark" });
-    }
-    
-    createBookmark.mutate({
-      downloadId,
-      text: selectedText,
-      position: Math.floor(window.scrollY),
-      label,
-    }, {
-      onSuccess: () => {
-        toast({ title: "Bookmark Added", description: "Bookmark saved" });
-        setShowToolbar(false);
-      },
-    });
-  };
-  
-  // Check if current selection has a bookmark
-  const checkBookmarkStatus = () => {
-    if (!selection) return 'none';
-    
-    const selectedText = selection.text;
-    
-    // Check for exact match
-    const exactMatch = bookmarks.some(b => b.text === selectedText);
-    if (exactMatch) return 'full';
-    
-    // Check for partial match
-    const partialMatch = bookmarks.some(b => 
-      (b.text && selectedText.includes(b.text)) || 
-      (b.text && b.text.includes(selectedText))
-    );
-    if (partialMatch) return 'partial';
-    
-    return 'none';
-  };
-  
-  const bookmarkStatus = showToolbar ? checkBookmarkStatus() : 'none';
-
-  const handleScrollToBookmark = (position: number) => {
-    window.scrollTo({ top: position, behavior: 'smooth' });
+    // Scroll to the note in the sidebar
+    setTimeout(() => {
+      const noteElement = document.getElementById(`sticky-note-${note.id}`);
+      if (noteElement) {
+        noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // Remove highlight after animation
+      setTimeout(() => {
+        setHighlightedNoteId(null);
+      }, 2000);
+    }, 100);
   };
 
   const handleExportPDF = (includeEdits: boolean) => {
@@ -448,29 +414,6 @@ export default function OfflineReaderPage() {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2" data-testid="button-bookmarks">
-                    <BookmarkIcon className="w-4 h-4" />
-                    Bookmarks
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {bookmarks.length === 0 ? (
-                    <DropdownMenuItem disabled>No bookmarks yet</DropdownMenuItem>
-                  ) : (
-                    bookmarks.map(bookmark => (
-                      <DropdownMenuItem 
-                        key={bookmark.id}
-                        onClick={() => handleScrollToBookmark(bookmark.position)}
-                      >
-                        {bookmark.label || 'Bookmark'}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
 
             <div className="flex items-center gap-2">
@@ -522,13 +465,13 @@ export default function OfflineReaderPage() {
                 highlights={highlights}
                 thoughts={thoughts}
                 annotations={annotations}
-                bookmarks={bookmarks}
                 fontFamily={fontFamily}
                 onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
                 onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
                 onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
                 onDeleteAnnotation={(id) => deleteAnnotation.mutate({ id, downloadId })}
                 onNoteClick={handleNoteClick}
+                onStickyNoteClick={handleStickyNoteTextClick}
               />
               {article.images && article.images.length > 1 && (
                 <div className="space-y-4 clear-both">
@@ -574,8 +517,6 @@ export default function OfflineReaderPage() {
               onAddThought={handleAddThought}
               onUnderline={handleUnderline}
               onAddNote={handleAddNote}
-              onBookmark={handleBookmark}
-              hasBookmark={bookmarkStatus}
             />
           )}
 
@@ -617,12 +558,16 @@ export default function OfflineReaderPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Table of Contents */}
+      {article && <TableOfContents content={article.content} />}
+
       {/* Sticky Notes Sidebar */}
       <StickyNotesSidebar
         notes={annotations.filter(a => a.type === 'sticky_note')}
         onNoteClick={handleNoteClick}
         onUpdateNote={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
         onDeleteNote={(id) => deleteAnnotation.mutate({ id, downloadId })}
+        highlightedNoteId={highlightedNoteId}
       />
 
       {/* Scroll to Top Button */}

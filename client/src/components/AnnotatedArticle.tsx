@@ -1,20 +1,20 @@
 import { useState } from "react";
-import type { Highlight, Thought, Annotation, Bookmark } from "@shared/schema";
+import type { Highlight, Thought, Annotation } from "@shared/schema";
 import { ThoughtCloud } from "./ThoughtCloud";
 import { formatContentWithAnnotations } from "@/lib/contentParser";
-import { Bookmark as BookmarkIcon } from "lucide-react";
 
 interface AnnotatedArticleProps {
   content: string;
   highlights: Highlight[];
   thoughts: Thought[];
   annotations: Annotation[];
-  bookmarks: Bookmark[];
   fontFamily: string;
   onUpdateThought: (id: string, text: string) => void;
   onDeleteThought: (id: string) => void;
   onUpdateAnnotation: (id: string, content: string) => void;
   onDeleteAnnotation: (id: string) => void;
+  onNoteClick?: (text: string) => void;
+  onStickyNoteClick?: (text: string) => void;
 }
 
 export function AnnotatedArticle({
@@ -22,14 +22,14 @@ export function AnnotatedArticle({
   highlights,
   thoughts,
   annotations,
-  bookmarks,
   fontFamily,
   onUpdateThought,
   onDeleteThought,
   onUpdateAnnotation,
   onDeleteAnnotation,
   onNoteClick,
-}: AnnotatedArticleProps & { onNoteClick?: (text: string) => void }) {
+  onStickyNoteClick,
+}: AnnotatedArticleProps) {
   const [activeThought, setActiveThought] = useState<Thought | null>(null);
   const [thoughtPosition, setThoughtPosition] = useState({ top: 0, left: 0 });
 
@@ -53,7 +53,6 @@ export function AnnotatedArticle({
       const itemHighlights = highlights.filter(h => h.text && itemText.includes(h.text));
       const itemThoughts = thoughts.filter(t => t.highlightedText && itemText.includes(t.highlightedText));
       const itemAnnotations = annotations.filter(a => a.text && itemText.includes(a.text));
-      const itemBookmarks = bookmarks.filter(b => b.text && itemText.includes(b.text));
       
       // For headings, render without annotations
       if (item.type === 'heading' || item.type === 'subheading') {
@@ -67,7 +66,7 @@ export function AnnotatedArticle({
       }
 
       // For paragraphs, apply annotations if any exist
-      if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0 && itemBookmarks.length === 0) {
+      if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0) {
         return (
           <div 
             key={idx} 
@@ -148,22 +147,7 @@ export function AnnotatedArticle({
           
           renderedText = renderedText.replace(
             regex,
-            `<span class="sticky-note-highlight" data-note-text="${annotation.text}" style="background-color: ${bgColor}; padding: 2px 6px; border-radius: 3px; border-left: 3px solid ${annotation.color === 'yellow' ? '#fbbf24' : annotation.color === 'pink' ? '#f472b6' : annotation.color === 'blue' ? '#60a5fa' : annotation.color === 'green' ? '#4ade80' : '#a78bfa'}; cursor: pointer;">${annotation.text}</span>`
-          );
-        }
-      });
-      
-      // Apply bookmark indicators with blue highlight and bookmark icon
-      itemBookmarks.forEach(bookmark => {
-        if (bookmark.text) {
-          const escapedText = bookmark.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
-          renderedText = renderedText.replace(
-            regex,
-            `<span class="relative inline-block bookmark-highlight" style="background-color: #dbeafe; padding: 2px 6px; border-radius: 3px; border-bottom: 3px solid #3b82f6; cursor: pointer;">
-              ${bookmark.text}
-              <span class="inline-block ml-1" style="vertical-align: middle; font-size: 1.1em;">🔖</span>
-            </span>`
+            `<span class="sticky-note-highlight" data-note-text="${annotation.text}" data-clickable="true" style="background-color: ${bgColor}; padding: 2px 6px; border-radius: 3px; border-left: 3px solid ${annotation.color === 'yellow' ? '#fbbf24' : annotation.color === 'pink' ? '#f472b6' : annotation.color === 'blue' ? '#60a5fa' : annotation.color === 'green' ? '#4ade80' : '#a78bfa'}; cursor: pointer;">${annotation.text}</span>`
           );
         }
       });
@@ -186,6 +170,12 @@ export function AnnotatedArticle({
             const target = e.target as HTMLElement;
             if (target.dataset.thoughtId) {
               setActiveThought(null);
+            }
+          }}
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (target.dataset.clickable && target.dataset.noteText && onStickyNoteClick) {
+              onStickyNoteClick(target.dataset.noteText);
             }
           }}
         />
