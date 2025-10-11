@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Highlight, Thought, Annotation } from "@shared/schema";
 import { ThoughtCloud } from "./ThoughtCloud";
 import { formatContentWithAnnotations } from "@/lib/contentParser";
@@ -10,6 +10,8 @@ interface AnnotatedArticleProps {
   annotations: Annotation[];
   fontFamily: string;
   searchText?: string;
+  currentSearchIndex?: number;
+  onSearchMatchesFound?: (count: number) => void;
   onUpdateThought: (id: string, text: string) => void;
   onDeleteThought: (id: string) => void;
   onUpdateAnnotation: (id: string, content: string) => void;
@@ -25,6 +27,8 @@ export function AnnotatedArticle({
   annotations,
   fontFamily,
   searchText = "",
+  currentSearchIndex = 0,
+  onSearchMatchesFound,
   onUpdateThought,
   onDeleteThought,
   onUpdateAnnotation,
@@ -47,15 +51,9 @@ export function AnnotatedArticle({
   // Render content with proper formatting
   const renderContent = () => {
     const formattedContent = formatContentWithAnnotations(content);
+    let searchMatchCounter = 0;
     
-    // Filter content based on search text
-    const filteredContent = searchText 
-      ? formattedContent.filter(item => 
-          item.text.toLowerCase().includes(searchText.toLowerCase())
-        )
-      : formattedContent;
-    
-    return filteredContent.map((item, idx) => {
+    return formattedContent.map((item, idx) => {
       const itemText = item.text;
       
       // Find highlights that match this content item
@@ -87,6 +85,28 @@ export function AnnotatedArticle({
 
       // Render with highlights and annotations
       let renderedText = itemText;
+      
+      // Apply search highlighting if search text exists
+      if (searchText && itemText.toLowerCase().includes(searchText.toLowerCase())) {
+        const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedSearch})`, 'gi');
+        const parts = itemText.split(regex);
+        
+        renderedText = parts.map((part, partIdx) => {
+          if (part.toLowerCase() === searchText.toLowerCase()) {
+            const isCurrentMatch = searchMatchCounter === currentSearchIndex;
+            const className = isCurrentMatch 
+              ? 'search-highlight search-highlight-current' 
+              : 'search-highlight';
+            const style = isCurrentMatch
+              ? 'background-color: #fbbf24; padding: 2px 4px; border-radius: 2px; font-weight: 600;'
+              : 'background-color: #fef08a; padding: 2px 4px; border-radius: 2px;';
+            searchMatchCounter++;
+            return `<span class="${className}" style="${style}">${part}</span>`;
+          }
+          return part;
+        }).join('');
+      }
       
       // Apply color highlights first (so they don't override thought highlights)
       itemHighlights.forEach(highlight => {
@@ -191,6 +211,21 @@ export function AnnotatedArticle({
       );
     });
   };
+
+  // Count total search matches and notify parent
+  useEffect(() => {
+    if (searchText && onSearchMatchesFound) {
+      const formattedContent = formatContentWithAnnotations(content);
+      let count = 0;
+      formattedContent.forEach(item => {
+        const matches = item.text.toLowerCase().split(searchText.toLowerCase()).length - 1;
+        count += matches;
+      });
+      onSearchMatchesFound(count);
+    } else if (onSearchMatchesFound) {
+      onSearchMatchesFound(0);
+    }
+  }, [searchText, content, onSearchMatchesFound]);
 
   return (
     <>

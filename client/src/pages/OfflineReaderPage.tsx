@@ -16,7 +16,8 @@ import {
   ExternalLink,
   ArrowUp,
   List,
-  StickyNote as StickyNoteIcon
+  StickyNote as StickyNoteIcon,
+  ChevronUp
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -68,6 +69,8 @@ export default function OfflineReaderPage() {
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
   const [showTOC, setShowTOC] = useState(false);
   const [showStickyNotes, setShowStickyNotes] = useState(false);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
+  const [totalSearchMatches, setTotalSearchMatches] = useState(0);
   
   const { toast } = useToast();
   
@@ -83,6 +86,13 @@ export default function OfflineReaderPage() {
   
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToSearchMatch = (index: number) => {
+    const matches = document.querySelectorAll('.search-highlight');
+    if (matches[index]) {
+      matches[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
   const { data, isLoading } = useDownload(downloadId);
   const { data: prefsData } = usePreferences();
@@ -411,16 +421,56 @@ export default function OfflineReaderPage() {
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
-              <div className="relative flex-1 max-w-xs">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search in article..."
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  className="pl-9 h-9"
-                  data-testid="input-search-article"
-                />
+              <div className="relative flex-1 max-w-md flex items-center gap-1">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search in article..."
+                    value={searchText}
+                    onChange={(e) => {
+                      setSearchText(e.target.value);
+                      setCurrentSearchIndex(0);
+                    }}
+                    className="pl-9 h-9"
+                    data-testid="input-search-article"
+                  />
+                  {searchText && totalSearchMatches > 0 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {currentSearchIndex + 1}/{totalSearchMatches}
+                    </div>
+                  )}
+                </div>
+                {searchText && totalSearchMatches > 0 && (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => {
+                        const newIndex = currentSearchIndex > 0 ? currentSearchIndex - 1 : totalSearchMatches - 1;
+                        setCurrentSearchIndex(newIndex);
+                        scrollToSearchMatch(newIndex);
+                      }}
+                      data-testid="button-search-prev"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => {
+                        const newIndex = currentSearchIndex < totalSearchMatches - 1 ? currentSearchIndex + 1 : 0;
+                        setCurrentSearchIndex(newIndex);
+                        scrollToSearchMatch(newIndex);
+                      }}
+                      data-testid="button-search-next"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               
               <Button
@@ -497,6 +547,8 @@ export default function OfflineReaderPage() {
                 annotations={annotations}
                 fontFamily={fontFamily}
                 searchText={searchText}
+                currentSearchIndex={currentSearchIndex}
+                onSearchMatchesFound={setTotalSearchMatches}
                 onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
                 onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
                 onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
