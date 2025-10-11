@@ -5,6 +5,16 @@ import { X, ChevronRight, ChevronLeft, Trash2, Edit2, Maximize2, Minimize2 } fro
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Annotation } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface StickyNotesSidebarProps {
   notes: Annotation[];
@@ -28,6 +38,7 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
   const [isMaximized, setIsMaximized] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleEdit = (note: Annotation) => {
     setEditingNoteId(note.id);
@@ -160,7 +171,7 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                               variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onDeleteNote(note.id);
+                                setDeleteConfirmId(note.id);
                               }}
                               className="h-6 px-2 text-destructive"
                               data-testid={`button-delete-sticky-note-${idx}`}
@@ -178,6 +189,33 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sticky Note</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this sticky note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-sticky-note">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmId) {
+                  onDeleteNote(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-sticky-note"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
