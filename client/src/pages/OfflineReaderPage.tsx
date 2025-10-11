@@ -263,6 +263,24 @@ export default function OfflineReaderPage() {
     }
   };
 
+  const handleRemoveAnnotation = () => {
+    if (selection) {
+      // Find underline annotation for this text
+      const underlineAnnotation = annotations.find(
+        a => a.type === 'underline' && a.text === selection.text
+      );
+      
+      if (underlineAnnotation) {
+        deleteAnnotation.mutate({ id: underlineAnnotation.id, downloadId }, {
+          onSuccess: () => {
+            toast({ title: "Underline Removed" });
+            setShowToolbar(false);
+          },
+        });
+      }
+    }
+  };
+
   const handleStickyNoteTextClick = (noteText: string) => {
     // Find the sticky note by its text
     const note = stickyNotes.find(n => n.text === noteText);
@@ -600,6 +618,8 @@ export default function OfflineReaderPage() {
               onAddThought={handleAddThought}
               onUnderline={handleUnderline}
               onAddNote={handleAddNote}
+              onRemove={handleRemoveAnnotation}
+              hasAnnotation={selection ? annotations.some(a => a.type === 'underline' && a.text === selection.text) : false}
             />
           )}
 
