@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TableOfContentsProps {
   content: string;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 interface HeadingItem {
@@ -14,8 +16,7 @@ interface HeadingItem {
   id: string;
 }
 
-export function TableOfContents({ content }: TableOfContentsProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function TableOfContents({ content, isOpen, onToggle }: TableOfContentsProps) {
 
   // Extract headings from content
   const headings: HeadingItem[] = [];
@@ -67,20 +68,9 @@ export function TableOfContents({ content }: TableOfContentsProps) {
 
   return (
     <>
-      {/* Toggle button when sidebar is closed */}
-      {!isOpen && (
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 rounded-r-lg rounded-l-none z-50 h-20 px-2 bg-primary hover:bg-primary/90"
-          data-testid="button-open-toc"
-        >
-          <List className="w-5 h-5" />
-        </Button>
-      )}
-
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-r shadow-xl transition-all duration-300 z-40 ${
+        className={`fixed right-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-l shadow-xl transition-all duration-300 z-40 ${
           isOpen ? 'w-80' : 'w-0'
         }`}
         data-testid="table-of-contents"
@@ -89,14 +79,14 @@ export function TableOfContents({ content }: TableOfContentsProps) {
           <div className="h-full flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-lg">Table of Contents</h3>
+              <h3 className="font-semibold text-lg">Outline</h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsOpen(false)}
+                onClick={onToggle}
                 data-testid="button-close-toc"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 

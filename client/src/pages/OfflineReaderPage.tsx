@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ArrowLeft,
   ExternalLink,
-  ArrowUp
+  ArrowUp,
+  List,
+  StickyNote as StickyNoteIcon
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,6 +66,8 @@ export default function OfflineReaderPage() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+  const [showTOC, setShowTOC] = useState(false);
+  const [showStickyNotes, setShowStickyNotes] = useState(false);
   
   const { toast } = useToast();
   
@@ -254,6 +258,11 @@ export default function OfflineReaderPage() {
     const note = stickyNotes.find(n => n.text === noteText);
     if (!note) return;
     
+    // Auto-open sticky notes sidebar if closed
+    if (!showStickyNotes) {
+      setShowStickyNotes(true);
+    }
+    
     // Highlight the note
     setHighlightedNoteId(note.id);
     
@@ -413,7 +422,28 @@ export default function OfflineReaderPage() {
                   data-testid="input-search-article"
                 />
               </div>
-
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTOC(!showTOC)}
+                className="gap-2"
+                data-testid="button-toggle-outline"
+              >
+                <List className="w-4 h-4" />
+                Outline
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStickyNotes(!showStickyNotes)}
+                className="gap-2"
+                data-testid="button-toggle-sticky-notes"
+              >
+                <StickyNoteIcon className="w-4 h-4" />
+                Sticky Notes
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -466,6 +496,7 @@ export default function OfflineReaderPage() {
                 thoughts={thoughts}
                 annotations={annotations}
                 fontFamily={fontFamily}
+                searchText={searchText}
                 onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
                 onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
                 onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
@@ -559,7 +590,13 @@ export default function OfflineReaderPage() {
       </AlertDialog>
 
       {/* Table of Contents */}
-      {article && <TableOfContents content={article.content} />}
+      {article && (
+        <TableOfContents 
+          content={article.content} 
+          isOpen={showTOC}
+          onToggle={() => setShowTOC(!showTOC)}
+        />
+      )}
 
       {/* Sticky Notes Sidebar */}
       <StickyNotesSidebar
@@ -568,6 +605,8 @@ export default function OfflineReaderPage() {
         onUpdateNote={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
         onDeleteNote={(id) => deleteAnnotation.mutate({ id, downloadId })}
         highlightedNoteId={highlightedNoteId}
+        isOpen={showStickyNotes}
+        onToggle={() => setShowStickyNotes(!showStickyNotes)}
       />
 
       {/* Scroll to Top Button */}

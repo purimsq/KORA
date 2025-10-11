@@ -12,6 +12,8 @@ interface StickyNotesSidebarProps {
   onUpdateNote: (id: string, content: string) => void;
   onDeleteNote: (id: string) => void;
   highlightedNoteId?: string | null;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 const STICKY_COLORS = [
@@ -22,16 +24,10 @@ const STICKY_COLORS = [
   { name: 'purple', bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-gray-800', shadow: 'shadow-purple-200' },
 ];
 
-export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteNote, highlightedNoteId }: StickyNotesSidebarProps) {
-  const [isOpen, setIsOpen] = useState(true);
+export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteNote, highlightedNoteId, isOpen, onToggle }: StickyNotesSidebarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-
-  // Auto-open sidebar when a note is highlighted
-  if (highlightedNoteId && !isOpen) {
-    setIsOpen(true);
-  }
 
   const handleEdit = (note: Annotation) => {
     setEditingNoteId(note.id);
@@ -45,21 +41,8 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
     setEditingNoteId(null);
   };
 
-  if (notes.length === 0) return null;
-
   return (
     <>
-      {/* Toggle button when sidebar is closed */}
-      {!isOpen && (
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 rounded-l-lg rounded-r-none z-50 h-20 px-2 bg-primary hover:bg-primary/90"
-          data-testid="button-open-sticky-notes"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-      )}
-
       {/* Sidebar */}
       <div
         className={`fixed right-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-l shadow-xl transition-all duration-300 z-40 ${
@@ -85,7 +68,7 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsOpen(false)}
+                  onClick={onToggle}
                   data-testid="button-close-sticky-notes"
                 >
                   <ChevronRight className="w-4 h-4" />

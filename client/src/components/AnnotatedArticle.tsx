@@ -9,6 +9,7 @@ interface AnnotatedArticleProps {
   thoughts: Thought[];
   annotations: Annotation[];
   fontFamily: string;
+  searchText?: string;
   onUpdateThought: (id: string, text: string) => void;
   onDeleteThought: (id: string) => void;
   onUpdateAnnotation: (id: string, content: string) => void;
@@ -23,6 +24,7 @@ export function AnnotatedArticle({
   thoughts,
   annotations,
   fontFamily,
+  searchText = "",
   onUpdateThought,
   onDeleteThought,
   onUpdateAnnotation,
@@ -46,7 +48,14 @@ export function AnnotatedArticle({
   const renderContent = () => {
     const formattedContent = formatContentWithAnnotations(content);
     
-    return formattedContent.map((item, idx) => {
+    // Filter content based on search text
+    const filteredContent = searchText 
+      ? formattedContent.filter(item => 
+          item.text.toLowerCase().includes(searchText.toLowerCase())
+        )
+      : formattedContent;
+    
+    return filteredContent.map((item, idx) => {
       const itemText = item.text;
       
       // Find highlights that match this content item
