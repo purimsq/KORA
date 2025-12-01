@@ -7,9 +7,9 @@ import { StickyNote } from "@/components/StickyNote";
 import { StickyNotesSidebar } from "@/components/StickyNotesSidebar";
 import { AnnotatedArticle } from "@/components/AnnotatedArticle";
 import { TableOfContents } from "@/components/TableOfContents";
-import { 
-  Download, 
-  RotateCcw, 
+import {
+  Download,
+  RotateCcw,
   Search as SearchIcon,
   ChevronDown,
   ArrowLeft,
@@ -28,12 +28,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useDownload } from "@/hooks/useDownloads";
-import { 
+import {
   useHighlights,
   useThoughts,
   useAnnotations,
-  useCreateHighlight, 
-  useCreateThought, 
+  useCreateHighlight,
+  useCreateThought,
   useCreateAnnotation,
   useUpdateThought,
   useDeleteThought,
@@ -57,7 +57,7 @@ export default function OfflineReaderPage() {
   const [, params] = useRoute("/reader/:id");
   const [, setLocation] = useLocation();
   const downloadId = params?.id || '';
-  
+
   const [selection, setSelection] = useState<{ text: string; range: Range } | null>(null);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
   const [showToolbar, setShowToolbar] = useState(false);
@@ -71,19 +71,19 @@ export default function OfflineReaderPage() {
   const [showStickyNotes, setShowStickyNotes] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [totalSearchMatches, setTotalSearchMatches] = useState(0);
-  
+
   const { toast } = useToast();
-  
+
   // Track scroll position for scroll to top button
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -119,7 +119,7 @@ export default function OfflineReaderPage() {
     if (sel && sel.toString().trim().length > 0) {
       const range = sel.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      
+
       setSelection({ text: sel.toString(), range });
       setToolbarPosition({
         top: rect.top + window.scrollY,
@@ -220,12 +220,12 @@ export default function OfflineReaderPage() {
         NodeFilter.SHOW_TEXT,
         null
       );
-      
+
       let node;
       while ((node = walker.nextNode())) {
         textNodes.push(node as Text);
       }
-      
+
       // Find the node containing the text
       for (const textNode of textNodes) {
         if (textNode.textContent?.includes(noteText)) {
@@ -233,13 +233,13 @@ export default function OfflineReaderPage() {
           if (parent) {
             // Scroll to the element
             parent.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
+
             // Add pop effect
             parent.classList.add('animate-pulse');
             setTimeout(() => {
               parent.classList.remove('animate-pulse');
             }, 1000);
-            
+
             break;
           }
         }
@@ -269,7 +269,7 @@ export default function OfflineReaderPage() {
       const underlineAnnotation = annotations.find(
         a => a.type === 'underline' && a.text === selection.text
       );
-      
+
       if (underlineAnnotation) {
         deleteAnnotation.mutate({ id: underlineAnnotation.id, downloadId }, {
           onSuccess: () => {
@@ -285,22 +285,22 @@ export default function OfflineReaderPage() {
     // Find the sticky note by its text
     const note = stickyNotes.find(n => n.text === noteText);
     if (!note) return;
-    
+
     // Auto-open sticky notes sidebar if closed
     if (!showStickyNotes) {
       setShowStickyNotes(true);
     }
-    
+
     // Highlight the note
     setHighlightedNoteId(note.id);
-    
+
     // Scroll to the note in the sidebar
     setTimeout(() => {
       const noteElement = document.getElementById(`sticky-note-${note.id}`);
       if (noteElement) {
         noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      
+
       // Remove highlight after animation
       setTimeout(() => {
         setHighlightedNoteId(null);
@@ -308,103 +308,42 @@ export default function OfflineReaderPage() {
     }, 100);
   };
 
-  const handleExportPDF = (includeEdits: boolean) => {
+  const handleExportPDF = async (includeEdits: boolean) => {
     if (!article) return;
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const maxWidth = pageWidth - 2 * margin;
+    // Add printing class to body to control visibility of annotations
+    const printClass = includeEdits ? 'printing-with-edits' : 'printing-clean';
+    document.body.classList.add(printClass);
 
-    // Title
-    doc.setFontSize(20);
-    doc.text(article.title, margin, 20, { maxWidth });
+    try {
+      // @ts-ignore - window.electron is exposed via preload
+      const result = await window.electron.printToPDF(article.title);
 
-    // Authors
-    doc.setFontSize(12);
-    let yPosition = 40;
-
-    if (article.authors && article.authors.length > 0) {
-      doc.text(`By ${article.authors.join(', ')}`, margin, yPosition);
-      yPosition += 10;
+      if (result.success) {
+        toast({
+          title: "PDF Exported",
+          description: `Saved to ${result.filePath}`,
+        });
+      } else if (result.canceled) {
+        // User canceled, do nothing
+      } else {
+        toast({
+          title: "Export Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF",
+        variant: "destructive",
+      });
+    } finally {
+      document.body.classList.remove(printClass);
+      setShowExportDialog(false);
     }
-
-    // Content
-    doc.setFontSize(11);
-    const lines = doc.splitTextToSize(article.content, maxWidth);
-    lines.forEach((line: string) => {
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      doc.text(line, margin, yPosition);
-      yPosition += 7;
-    });
-
-    // Include annotations if requested
-    if (includeEdits && (highlights.length > 0 || thoughts.length > 0 || annotations.length > 0)) {
-      doc.addPage();
-      doc.setFontSize(16);
-      doc.text('Annotations', margin, 20);
-      
-      yPosition = 35;
-      doc.setFontSize(10);
-
-      // Highlights
-      if (highlights.length > 0) {
-        doc.text('Highlights:', margin, yPosition);
-        yPosition += 7;
-        highlights.forEach(h => {
-          if (yPosition > 270) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          doc.text(`  • ${h.text.substring(0, 100)}... (${h.color})`, margin, yPosition);
-          yPosition += 7;
-        });
-      }
-
-      // Thoughts
-      if (thoughts.length > 0) {
-        yPosition += 5;
-        doc.text('Thoughts:', margin, yPosition);
-        yPosition += 7;
-        thoughts.forEach(t => {
-          if (yPosition > 270) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          doc.text(`  • "${t.highlightedText}"`, margin, yPosition);
-          yPosition += 7;
-          doc.text(`    → ${t.text}`, margin, yPosition);
-          yPosition += 7;
-        });
-      }
-
-      // Notes
-      const stickyNotes = annotations.filter(a => a.type === 'sticky_note');
-      if (stickyNotes.length > 0) {
-        yPosition += 5;
-        doc.text('Notes:', margin, yPosition);
-        yPosition += 7;
-        stickyNotes.forEach(note => {
-          if (yPosition > 270) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          doc.text(`  • ${note.content || ''}`, margin, yPosition);
-          yPosition += 7;
-        });
-      }
-    }
-
-    doc.save(`${article.title}.pdf`);
-    
-    toast({
-      title: "PDF Exported",
-      description: `"${article.title}.pdf" has been downloaded${includeEdits ? ' with annotations' : ''}`,
-    });
-    setShowExportDialog(false);
   };
 
   if (isLoading) {
@@ -490,7 +429,7 @@ export default function OfflineReaderPage() {
                   </div>
                 )}
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -501,7 +440,7 @@ export default function OfflineReaderPage() {
                 <List className="w-4 h-4" />
                 Outline
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -515,7 +454,7 @@ export default function OfflineReaderPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button 
+              <Button
                 size="sm"
                 onClick={() => setShowExportDialog(true)}
                 className="gap-2"
@@ -531,7 +470,7 @@ export default function OfflineReaderPage() {
 
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto relative">
-          <article 
+          <article
             onMouseUp={handleTextSelection}
             data-testid="article-content"
           >
@@ -546,8 +485,8 @@ export default function OfflineReaderPage() {
             <div className="space-y-6">
               {article.images && article.images.length > 0 && (
                 <div className="float-right ml-6 mb-4 w-full sm:w-1/2">
-                  <img 
-                    src={article.images[0].url} 
+                  <img
+                    src={article.images[0].url}
                     alt={article.images[0].caption || article.title}
                     className="w-full rounded-lg shadow-md"
                   />
@@ -578,8 +517,8 @@ export default function OfflineReaderPage() {
                 <div className="space-y-4 clear-both">
                   {article.images.slice(1).map((img: any, index: number) => (
                     <div key={index + 1}>
-                      <img 
-                        src={img.url} 
+                      <img
+                        src={img.url}
                         alt={img.caption || article.title}
                         className="w-full rounded-lg shadow-md"
                         data-testid={`img-article-${index + 1}`}
@@ -594,10 +533,10 @@ export default function OfflineReaderPage() {
                 </div>
               )}
             </div>
-            
+
             {article.sourceUrl && (
               <div className="mt-6 pt-6 border-t">
-                <a 
+                <a
                   href={article.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -663,8 +602,8 @@ export default function OfflineReaderPage() {
 
       {/* Table of Contents */}
       {article && (
-        <TableOfContents 
-          content={article.content} 
+        <TableOfContents
+          content={article.content}
           isOpen={showTOC}
           onToggle={() => setShowTOC(!showTOC)}
         />

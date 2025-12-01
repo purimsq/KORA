@@ -2,15 +2,61 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
+import { JSDOM } from "jsdom";
+import { Readability } from "@mozilla/readability";
 import type { SearchSuggestion } from "@shared/schema";
-import { 
-  insertDownloadSchema, 
-  insertHighlightSchema, 
+import {
+  insertDownloadSchema,
+  insertHighlightSchema,
   insertBookmarkSchema,
   insertThoughtSchema,
   insertAnnotationSchema,
-  insertUserPreferencesSchema 
+  insertUserPreferencesSchema
 } from "@shared/schema";
+
+// Helper to fetch full content from a URL using Readability
+async function fetchFullContent(url: string): Promise<{ content: string; textContent: string; image?: string } | null> {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      },
+      timeout: 10000,
+      transformResponse: [(data) => data]
+    });
+
+    if (typeof response.data !== 'string') {
+      return null;
+    }
+
+    const dom = new JSDOM(response.data, { url });
+    const reader = new Readability(dom.window.document);
+    const article = reader.parse();
+
+    if (article) {
+      let image: string | undefined = article.siteName ? undefined : undefined;
+
+      if (!image) {
+        const ogImage = dom.window.document.querySelector('meta[property="og:image"]');
+        if (ogImage) {
+          const content = ogImage.getAttribute('content');
+          if (content) image = content;
+        }
+      }
+
+      return {
+        content: article.content || '',
+        textContent: article.textContent || '',
+        image,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error(`Failed to fetch full content from ${url}:`, error instanceof Error ? error.message : String(error));
+    return null;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Search API - Semantic Scholar + Wikipedia
@@ -39,11 +85,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pubmedResponse = await axios.get(
           `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`,
           {
-            params: { 
-              db: 'pubmed', 
-              term: q, 
-              retmode: 'json', 
-              retmax: 10 
+            params: {
+              db: 'pubmed',
+              term: q,
+              retmode: 'json',
+              retmax: 10
             },
             timeout: 5000,
           }
@@ -51,15 +97,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (pubmedResponse.data?.esearchresult?.idlist) {
           const pmids = pubmedResponse.data.esearchresult.idlist.slice(0, 5);
-          
+
           if (pmids.length > 0) {
             const fetchResponse = await axios.get(
               `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi`,
               {
-                params: { 
-                  db: 'pubmed', 
-                  id: pmids.join(','), 
-                  retmode: 'json' 
+                params: {
+                  db: 'pubmed',
+                  id: pmids.join(','),
+                  retmode: 'json'
                 },
                 timeout: 5000,
               }
@@ -91,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const today = new Date().toISOString().split('T')[0];
         const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        
+
         const medRxivResponse = await axios.get(
           `https://api.biorxiv.org/details/medrxiv/${monthAgo}/${today}/0`,
           { timeout: 5000 }
@@ -99,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (medRxivResponse.data?.collection) {
           const filtered = medRxivResponse.data.collection
-            .filter((paper: any) => 
+            .filter((paper: any) =>
               paper.title.toLowerCase().includes(q.toLowerCase()) ||
               paper.abstract?.toLowerCase().includes(q.toLowerCase())
             )
@@ -153,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const openAlexResponse = await axios.get(
           `https://api.openalex.org/works`,
           {
-            params: { 
+            params: {
               filter: `title.search:${q}`,
               per_page: 5,
               mailto: 'contact@example.com'
@@ -193,6 +239,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               language: 'en',
               format: 'json',
               limit: 5,
+            },
+            headers: {
+              'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)'
             },
             timeout: 5000,
           }
@@ -235,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (ddgResponse.data) {
           const ddgData = ddgResponse.data;
-          
+
           // Add main result if available
           if (ddgData.AbstractText && ddgData.Heading) {
             const isDownloaded = localDownloads.some(d => d.title === ddgData.Heading);
@@ -247,24 +296,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 isDownloaded,
               });
             }
-          }
-
-          // Add related topics
-          if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
-            ddgData.RelatedTopics.slice(0, 3).forEach((topic: any) => {
-              if (topic.Text && topic.FirstURL) {
-                const title = topic.Text.split(' - ')[0];
-                const isDownloaded = localDownloads.some(d => d.title === title);
-                if (!suggestions.find(s => s.title === title)) {
-                  suggestions.push({
-                    id: `ddg-${Date.now()}-${Math.random()}`,
-                    title,
-                    source: 'duckduckgo',
-                    isDownloaded,
-                  });
-                }
-              }
-            });
           }
         }
       } catch (error) {
@@ -313,6 +344,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               namespace: 0,
               format: 'json',
             },
+            headers: {
+              'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)'
+            },
             timeout: 5000,
           }
         );
@@ -357,11 +391,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const response = await axios.get(
           `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi`,
           {
-            params: { 
-              db: 'pubmed', 
-              id, 
-              retmode: 'xml', 
-              rettype: 'abstract' 
+            params: {
+              db: 'pubmed',
+              id,
+              retmode: 'xml',
+              rettype: 'abstract'
             },
             timeout: 10000,
           }
@@ -372,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const titleMatch = xmlData.match(/<ArticleTitle>([\s\S]*?)<\/ArticleTitle>/);
         const abstractMatch = xmlData.match(/<AbstractText.*?>([\s\S]*?)<\/AbstractText>/);
         const authorMatches = xmlData.match(/<Author.*?>([\s\S]*?)<\/Author>/g);
-        
+
         const authors: string[] = [];
         if (authorMatches) {
           authorMatches.forEach((author: string) => {
@@ -386,15 +420,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (titleMatch) {
           const abstract = abstractMatch ? abstractMatch[1].replace(/<[^>]*>/g, '') : 'No abstract available.';
+          const sourceUrl = `https://pubmed.ncbi.nlm.nih.gov/${id}/`;
+
+          // Try to fetch full content from the source URL
+          let fullContent = abstract;
+          let images: any[] = [];
+
+          try {
+            const extracted = await fetchFullContent(sourceUrl);
+            if (extracted) {
+              fullContent = extracted.content; // Use HTML content
+              if (extracted.image) {
+                images.push({ url: extracted.image, caption: titleMatch[1] });
+              }
+            }
+          } catch (e) {
+            console.log('Failed to extract full content for PubMed article');
+          }
+
           articleData = {
             title: titleMatch[1],
-            content: abstract,
+            content: fullContent,
             abstract,
             authors,
             source: 'pubmed',
-            sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+            sourceUrl,
             category: 'scientific',
-            images: [],
+            images,
           };
         }
       } else if (source === 'medrxiv') {
@@ -407,16 +459,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (response.data?.collection?.[0]) {
           const paper = response.data.collection[0];
           const authors = paper.authors ? paper.authors.split(';').map((a: string) => a.trim()) : [];
-          
+          const sourceUrl = `https://www.medrxiv.org/content/${paper.doi}`;
+
+          // Try to fetch full content
+          let fullContent = paper.abstract || 'No abstract available.';
+          let images: any[] = [];
+
+          try {
+            const extracted = await fetchFullContent(sourceUrl);
+            if (extracted) {
+              fullContent = extracted.content;
+              if (extracted.image) {
+                images.push({ url: extracted.image, caption: paper.title });
+              }
+            }
+          } catch (e) {
+            console.log('Failed to extract full content for medRxiv article');
+          }
+
           articleData = {
             title: paper.title,
-            content: paper.abstract || 'No abstract available.',
+            content: fullContent,
             abstract: paper.abstract,
             authors,
             source: 'medrxiv',
-            sourceUrl: `https://www.medrxiv.org/content/${paper.doi}`,
+            sourceUrl,
             category: 'preprint',
-            images: [],
+            images,
           };
         }
       } else if (source === 'semantic_scholar') {
@@ -424,22 +493,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const response = await axios.get(
           `https://api.semanticscholar.org/graph/v1/paper/${id}`,
           {
-            params: { fields: 'title,abstract,authors,url,openAccessPdf' },
+            params: { fields: 'title,abstract,authors,url,openAccessPdf,tldr' },
             timeout: 10000,
           }
         );
 
         if (response.data) {
           const paper = response.data;
+          // Use tldr as fallback if abstract is missing
+          const summary = paper.abstract || paper.tldr?.text || 'No content available.';
+          let fullContent = summary;
+          let images: any[] = [];
+
+          // Try to fetch full content if URL is available
+          if (paper.url) {
+            try {
+              const extracted = await fetchFullContent(paper.url);
+              if (extracted) {
+                fullContent = extracted.content;
+                if (extracted.image) {
+                  images.push({ url: extracted.image, caption: paper.title });
+                }
+              }
+            } catch (e) {
+              console.log('Failed to extract full content for Semantic Scholar article');
+            }
+          }
+
           articleData = {
             title: paper.title,
-            content: paper.abstract || 'No content available.',
-            abstract: paper.abstract,
+            content: fullContent,
+            abstract: summary,
             authors: paper.authors?.map((a: any) => a.name) || [],
             source: 'semantic_scholar',
             sourceUrl: paper.url,
             category: 'scientific',
-            images: [],
+            images,
           };
         }
       } else if (source === 'openalex') {
@@ -455,31 +544,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (response.data) {
           const work = response.data;
+          const abstract = work.abstract_inverted_index ?
+            Object.keys(work.abstract_inverted_index).slice(0, 30).join(' ') + '...'
+            : 'Abstract not available.';
+
+          let fullContent = work.abstract_inverted_index ?
+            Object.entries(work.abstract_inverted_index)
+              .flatMap(([word, positions]: [string, any]) =>
+                (positions as number[]).map(pos => ({ word, pos }))
+              )
+              .sort((a, b) => a.pos - b.pos)
+              .map(item => item.word)
+              .join(' ')
+            : 'Full text not available.';
+
+          const sourceUrl = work.doi ? `https://doi.org/${work.doi.replace('https://doi.org/', '')}` : work.id;
+          let images: any[] = [];
+
+          // Try to fetch full content if URL is available
+          if (sourceUrl) {
+            try {
+              const extracted = await fetchFullContent(sourceUrl);
+              if (extracted) {
+                fullContent = extracted.content;
+                if (extracted.image) {
+                  images.push({ url: extracted.image, caption: work.title });
+                }
+              }
+            } catch (e) {
+              console.log('Failed to extract full content for OpenAlex article');
+            }
+          }
+
           articleData = {
             title: work.title || title || 'Untitled',
-            content: work.abstract_inverted_index ? 
-              Object.entries(work.abstract_inverted_index)
-                .flatMap(([word, positions]: [string, any]) => 
-                  (positions as number[]).map(pos => ({ word, pos }))
-                )
-                .sort((a, b) => a.pos - b.pos)
-                .map(item => item.word)
-                .join(' ') 
-              : 'Full text not available.',
-            abstract: work.abstract_inverted_index ? 
-              Object.keys(work.abstract_inverted_index).slice(0, 30).join(' ') + '...' 
-              : 'Abstract not available.',
+            content: fullContent,
+            abstract,
             authors: work.authorships?.map((a: any) => a.author?.display_name).filter(Boolean) || [],
             source: 'openalex',
-            sourceUrl: work.doi ? `https://doi.org/${work.doi.replace('https://doi.org/', '')}` : work.id,
+            sourceUrl,
             category: 'scientific',
-            images: [],
+            images,
           };
         }
       } else if (source === 'wikidata') {
         // Fetch from Wikidata
         const entityId = id.replace('wikidata-', '').split('-')[0];
-        
+
         const response = await axios.get(
           `https://www.wikidata.org/w/api.php`,
           {
@@ -490,6 +601,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               languages: 'en',
               format: 'json',
             },
+            headers: {
+              'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)'
+            },
             timeout: 10000,
           }
         );
@@ -498,16 +612,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const entity = response.data.entities[entityId];
           const label = entity.labels?.en?.value || 'Unknown';
           const description = entity.descriptions?.en?.value || '';
-          
+
           // Build content from claims
           let content = description + '\n\n';
-          
+
           // Get Wikipedia link if available
           let sourceUrl = `https://www.wikidata.org/wiki/${entityId}`;
           if (entity.sitelinks?.enwiki) {
             sourceUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(entity.sitelinks.enwiki.title)}`;
+
+            // If we have a Wikipedia link, try to fetch its content instead of just Wikidata claims
+            try {
+              const extracted = await fetchFullContent(sourceUrl);
+              if (extracted) {
+                content = extracted.content;
+              }
+            } catch (e) {
+              console.log('Failed to extract Wikipedia content for Wikidata item');
+            }
           }
-          
+
           // Get image if available
           const images: any[] = [];
           if (entity.claims?.P18) {
@@ -518,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               images.push({ url: imageUrl, caption: label });
             }
           }
-          
+
           articleData = {
             title: label,
             content: content || description || 'No detailed information available.',
@@ -533,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (source === 'duckduckgo') {
         // Fetch from DuckDuckGo
         const searchTitle = title || id.replace('ddg-main-', '').replace(/^ddg-\d+-[\d.]+$/, title || 'search');
-        
+
         const response = await axios.get(
           `https://api.duckduckgo.com/`,
           {
@@ -550,43 +674,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (response.data) {
           const ddgData = response.data;
           const images: any[] = [];
-          
+
           // Get main image if available
           if (ddgData.Image && ddgData.Image.trim() !== '') {
             images.push({ url: ddgData.Image, caption: ddgData.Heading || searchTitle });
           }
-          
+
           // Get images from related topics
           if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
             ddgData.RelatedTopics.slice(0, 5).forEach((topic: any) => {
               if (topic.Icon && topic.Icon.URL && topic.Icon.URL.trim() !== '' && !topic.Icon.URL.includes('spacer.gif')) {
-                images.push({ 
-                  url: topic.Icon.URL, 
-                  caption: topic.Text ? topic.Text.split(' - ')[0] : searchTitle 
+                images.push({
+                  url: topic.Icon.URL,
+                  caption: topic.Text ? topic.Text.split(' - ')[0] : searchTitle
                 });
               }
             });
           }
-          
+
           let content = ddgData.AbstractText || '';
-          
-          // Add related topics as additional content
-          if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
-            content += '\n\n===Related Topics===\n\n';
-            ddgData.RelatedTopics.slice(0, 10).forEach((topic: any) => {
-              if (topic.Text) {
-                content += topic.Text + '\n\n';
+          const sourceUrl = ddgData.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(searchTitle)}`;
+
+          // Try to fetch full content from the source URL
+          if (ddgData.AbstractURL) {
+            try {
+              const extracted = await fetchFullContent(ddgData.AbstractURL);
+              if (extracted) {
+                content = extracted.content;
+                if (extracted.image && images.length === 0) {
+                  images.push({ url: extracted.image, caption: searchTitle });
+                }
               }
-            });
+            } catch (e) {
+              console.log('Failed to extract full content for DuckDuckGo result');
+            }
+          } else {
+            // Add related topics as additional content if no full text
+            if (ddgData.RelatedTopics && Array.isArray(ddgData.RelatedTopics)) {
+              content += '\n\n===Related Topics===\n\n';
+              ddgData.RelatedTopics.slice(0, 10).forEach((topic: any) => {
+                if (topic.Text) {
+                  content += topic.Text + '\n\n';
+                }
+              });
+            }
           }
-          
+
           articleData = {
             title: ddgData.Heading || searchTitle,
             content: content || 'No content available.',
             abstract: ddgData.AbstractText?.substring(0, 200) + '...' || '',
             authors: [],
             source: 'duckduckgo',
-            sourceUrl: ddgData.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(searchTitle)}`,
+            sourceUrl,
             category: 'general',
             images,
           };
@@ -594,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (source === 'openlibrary') {
         // Fetch from Open Library - id is URL-decoded by Express
         const bookKey = id.startsWith('/works/') ? id : id.startsWith('OL') ? `/works/${id}` : id;
-        
+
         const response = await axios.get(
           `https://openlibrary.org${bookKey}.json`,
           { timeout: 10000 }
@@ -603,20 +743,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (response.data) {
           const book = response.data;
           const images: any[] = [];
-          
+
           // Get book cover
           if (book.covers && book.covers[0]) {
-            images.push({ 
+            images.push({
               url: `https://covers.openlibrary.org/b/id/${book.covers[0]}-L.jpg`,
-              caption: book.title 
+              caption: book.title
             });
           }
-          
+
           let content = book.description;
           if (typeof content === 'object' && content.value) {
             content = content.value;
           }
-          
+
           // Add book details
           if (!content) content = '';
           if (book.first_publish_date) {
@@ -625,12 +765,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (book.subjects) {
             content += `\n\n===Subjects===\n${book.subjects.slice(0, 10).join(', ')}`;
           }
-          
+
           articleData = {
             title: book.title || title || 'Untitled',
             content: content || 'No description available.',
-            abstract: typeof book.description === 'string' ? 
-              book.description.substring(0, 200) + '...' : 
+            abstract: typeof book.description === 'string' ?
+              book.description.substring(0, 200) + '...' :
               'No description available.',
             authors: book.authors?.map((a: any) => a.name || a.author?.name).filter(Boolean) || [],
             source: 'openlibrary',
@@ -642,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (source === 'wikipedia') {
         // Fetch from Wikipedia
         const searchTitle = title || id.replace('wiki-', '').replace(/\d+-[\d.]+$/, title || 'search');
-        
+
         // Get page content with all images
         const contentResponse = await axios.get(
           `https://en.wikipedia.org/w/api.php`,
@@ -655,17 +795,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               pithumbsize: 500,
               format: 'json',
             },
+            headers: {
+              'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)'
+            },
             timeout: 10000,
           }
         );
 
         const pages = contentResponse.data?.query?.pages;
         const pageId = Object.keys(pages || {})[0];
-        
-        if (pageId && pages[pageId]) {
+
+        if (pageId && pageId !== '-1' && pages[pageId]) {
           const page = pages[pageId];
           const images: any[] = [];
-          
+
           // Get all images from the page
           if (page.images && Array.isArray(page.images)) {
             for (const img of page.images.slice(0, 10)) {
@@ -680,10 +823,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       iiprop: 'url',
                       format: 'json',
                     },
+                    headers: {
+                      'User-Agent': 'KORA-Research-Assistant/1.0 (contact@example.com)'
+                    },
                     timeout: 5000,
                   }
                 );
-                
+
                 const imgPages = imgResponse.data?.query?.pages;
                 const imgPageId = Object.keys(imgPages || {})[0];
                 if (imgPageId && imgPages[imgPageId]?.imageinfo?.[0]?.url) {
@@ -698,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           }
-          
+
           articleData = {
             title: page.title,
             content: page.extract || 'No content available.',
@@ -718,11 +864,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Save to articles table for caching
       const article = await storage.createArticle(articleData);
-      
+
       res.json({ article });
     } catch (error) {
       console.error('Fetch article error:', error);
-      res.status(500).json({ error: 'Failed to fetch article' });
+      res.status(500).json({
+        error: 'Failed to fetch article',
+        details: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   });
 

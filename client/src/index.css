@@ -4,15 +4,16 @@
 
 /* LIGHT MODE */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0, 0, 0, .10);
+  --badge-outline: rgba(0, 0, 0, .05);
 
   /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  --opaque-button-border-intensity: -8;
+  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --elevate-1: rgba(0, 0, 0, .03);
+  --elevate-2: rgba(0, 0, 0, .08);
 
   --background: 38 3% 92%;
 
@@ -126,14 +127,15 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255, 255, 255, .10);
+  --badge-outline: rgba(255, 255, 255, .05);
 
-  --opaque-button-border-intensity: 9;  /* In terms of percentages */
+  --opaque-button-border-intensity: 9;
+  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255, 255, 255, .04);
+  --elevate-2: rgba(255, 255, 255, .09);
 
   --background: 0 0% 10%;
 
@@ -354,13 +356,33 @@
   }
 
   /* Font family application */
-  .font-sans { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  .font-serif { font-family: "Crimson Text", Georgia, serif; }
-  .font-display { font-family: "Playfair Display", Georgia, serif; }
-  .font-script { font-family: "Dancing Script", cursive; }
-  .font-body { font-family: Lora, Georgia, serif; }
-  .font-elegant { font-family: "Cormorant Garamond", Georgia, serif; }
-  .font-reading { font-family: Merriweather, Georgia, serif; }
+  .font-sans {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .font-serif {
+    font-family: "Crimson Text", Georgia, serif;
+  }
+
+  .font-display {
+    font-family: "Playfair Display", Georgia, serif;
+  }
+
+  .font-script {
+    font-family: "Dancing Script", cursive;
+  }
+
+  .font-body {
+    font-family: Lora, Georgia, serif;
+  }
+
+  .font-elegant {
+    font-family: "Cormorant Garamond", Georgia, serif;
+  }
+
+  .font-reading {
+    font-family: Merriweather, Georgia, serif;
+  }
 
   /* Article font selection */
   .article-font {
@@ -443,14 +465,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      transparent 30%,
-      rgba(56, 189, 248, 0.15) 50%,
-      transparent 70%,
-      transparent 100%
-    );
+    background: linear-gradient(180deg,
+        transparent 0%,
+        transparent 30%,
+        rgba(56, 189, 248, 0.15) 50%,
+        transparent 70%,
+        transparent 100%);
     animation: scan 1.5s ease-in-out;
     pointer-events: none;
     z-index: 10;
@@ -460,6 +480,7 @@
     0% {
       transform: translateY(-100%);
     }
+
     100% {
       transform: translateY(100%);
     }
@@ -472,11 +493,221 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.8) 0%,
-      transparent 100%
-    );
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        transparent 100%);
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: 999;
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+
+  /* Glassmorphism theme styles */
+  .glass-theme {
+    --background: 210 100% 97%;
+    --card: 210 100% 95%;
+    --border: 210 50% 85%;
+  }
+
+  .glass-theme .backdrop-glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-theme .card-glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Font family application */
+  .font-sans {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .font-serif {
+    font-family: "Crimson Text", Georgia, serif;
+  }
+
+  .font-display {
+    font-family: "Playfair Display", Georgia, serif;
+  }
+
+  .font-script {
+    font-family: "Dancing Script", cursive;
+  }
+
+  .font-body {
+    font-family: Lora, Georgia, serif;
+  }
+
+  .font-elegant {
+    font-family: "Cormorant Garamond", Georgia, serif;
+  }
+
+  .font-reading {
+    font-family: Merriweather, Georgia, serif;
+  }
+
+  /* Article font selection */
+  .article-font {
+    font-family: var(--selected-font, var(--font-sans));
+  }
+
+  /* Highlight styles */
+  .highlight-yellow {
+    background-color: rgba(250, 204, 21, 0.4);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-yellow:hover {
+    background-color: rgba(250, 204, 21, 0.6);
+  }
+
+  .highlight-green {
+    background-color: rgba(34, 197, 94, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-green:hover {
+    background-color: rgba(34, 197, 94, 0.5);
+  }
+
+  .highlight-thought {
+    background-color: rgba(147, 197, 253, 0.4);
+    cursor: pointer;
+    border-bottom: 2px dotted rgba(59, 130, 246, 0.6);
+  }
+
+  .underline-annotation {
+    border-bottom: 2px solid hsl(var(--primary));
+    cursor: pointer;
+  }
+
+  /* Sticky note highlight colors */
+  .highlight-pink {
+    background-color: rgba(236, 72, 153, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-pink:hover {
+    background-color: rgba(236, 72, 153, 0.5);
+  }
+
+  .highlight-blue {
+    background-color: rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-blue:hover {
+    background-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .highlight-purple {
+    background-color: rgba(168, 85, 247, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-purple:hover {
+    background-color: rgba(168, 85, 247, 0.5);
+  }
+
+  /* GitHub Copilot-style scanning effect */
+  .scanning-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanning-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        transparent 0%,
+        transparent 30%,
+        rgba(56, 189, 248, 0.15) 50%,
+        transparent 70%,
+        transparent 100%);
+    animation: scan 1.5s ease-in-out;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  @keyframes scan {
+    0% {
+      transform: translateY(-100%);
+    }
+
+    100% {
+      transform: translateY(100%);
+    }
+  }
+
+  .scanning-effect::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        transparent 100%);
     animation: reveal 1.5s ease-out forwards;
     pointer-events: none;
     z-index: 9;
@@ -486,8 +717,297 @@
     0% {
       opacity: 1;
     }
+
     100% {
       opacity: 0;
     }
+  }
+}
+
+@media print {
+
+  /* Hide all UI elements */
+  header,
+  nav,
+  button,
+  .toaster,
+  .fixed,
+  .sticky,
+  [role="dialog"],
+  [data-testid^="button-"],
+  [data-testid="link-source"] {
+    display: none !important;
+  }
+
+  /* Reset layout constraints */
+  body,
+  #root,
+  .min-h-screen,
+  .container,
+  article {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Ensure images are visible and sized correctly */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Article content specific adjustments */
+  .prose {
+    max-width: none !important;
+  }
+
+  /* CLEAN MODE: Hide all annotations */
+  body.printing-clean mark,
+  body.printing-clean .highlight-yellow,
+  body.printing-clean .highlight-green,
+  body.printing-clean .highlight-pink,
+  body.printing-clean .highlight-blue,
+  body.printing-clean .highlight-purple,
+  body.printing-clean .highlight-thought,
+  body.printing-clean .sticky-note-highlight,
+  body.printing-clean .underline-annotation {
+    background-color: transparent !important;
+    border: none !important;
+    text-decoration: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+
+  /* WITH EDITS MODE: Show annotations */
+  body.printing-with-edits .print-thought-content,
+  body.printing-with-edits .print-note-content {
+    display: block !important;
+    font-size: 0.9em;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+    font-style: italic;
+    color: #333;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  body.printing-with-edits .print-thought-content::before {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-yellow:hover {
+    background-color: rgba(250, 204, 21, 0.6);
+  }
+
+  .highlight-green {
+    background-color: rgba(34, 197, 94, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-green:hover {
+    background-color: rgba(34, 197, 94, 0.5);
+  }
+
+  .highlight-thought {
+    background-color: rgba(147, 197, 253, 0.4);
+    cursor: pointer;
+    border-bottom: 2px dotted rgba(59, 130, 246, 0.6);
+  }
+
+  .underline-annotation {
+    border-bottom: 2px solid hsl(var(--primary));
+    cursor: pointer;
+  }
+
+  /* Sticky note highlight colors */
+  .highlight-pink {
+    background-color: rgba(236, 72, 153, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-pink:hover {
+    background-color: rgba(236, 72, 153, 0.5);
+  }
+
+  .highlight-blue {
+    background-color: rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-blue:hover {
+    background-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .highlight-purple {
+    background-color: rgba(168, 85, 247, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .highlight-purple:hover {
+    background-color: rgba(168, 85, 247, 0.5);
+  }
+
+  /* GitHub Copilot-style scanning effect */
+  .scanning-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanning-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        transparent 0%,
+        transparent 30%,
+        rgba(56, 189, 248, 0.15) 50%,
+        transparent 70%,
+        transparent 100%);
+    animation: scan 1.5s ease-in-out;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  @keyframes scan {
+    0% {
+      transform: translateY(-100%);
+    }
+
+    100% {
+      transform: translateY(100%);
+    }
+  }
+
+  .scanning-effect::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        transparent 100%);
+    animation: reveal 1.5s ease-out forwards;
+    pointer-events: none;
+    z-index: 9;
+  }
+
+  @keyframes reveal {
+    0% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+@media print {
+
+  /* Hide all UI elements */
+  header,
+  nav,
+  button,
+  .toaster,
+  .fixed,
+  .sticky,
+  [role="dialog"],
+  [data-testid^="button-"],
+  [data-testid="link-source"] {
+    display: none !important;
+  }
+
+  /* Reset layout constraints */
+  body,
+  #root,
+  .min-h-screen,
+  .container,
+  article {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Ensure images are visible and sized correctly */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Article content specific adjustments */
+  .prose {
+    max-width: none !important;
+  }
+
+  /* CLEAN MODE: Hide all annotations */
+  body.printing-clean mark,
+  body.printing-clean .highlight-yellow,
+  body.printing-clean .highlight-green,
+  body.printing-clean .highlight-pink,
+  body.printing-clean .highlight-blue,
+  body.printing-clean .highlight-purple,
+  body.printing-clean .highlight-thought,
+  body.printing-clean .sticky-note-highlight,
+  body.printing-clean .underline-annotation {
+    background-color: transparent !important;
+    border: none !important;
+    text-decoration: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+
+  /* WITH EDITS MODE: Show annotations */
+  body.printing-with-edits .print-thought-content,
+  body.printing-with-edits .print-note-content {
+    display: block !important;
+    font-size: 0.9em;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+    font-style: italic;
+    color: #333;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  body.printing-with-edits .print-thought-content::before {
+    content: "💭 Thought: ";
+    font-weight: bold;
+    color: #3b82f6;
+  }
+
+  body.printing-with-edits .print-note-content::before {
+    content: "📝 Note: ";
+    font-weight: bold;
+    color: #f59e0b;
   }
 }

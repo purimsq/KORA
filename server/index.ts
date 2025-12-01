@@ -60,12 +60,10 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const port = process.env.PORT || 5000;
+  // On Windows, binding to 0.0.0.0 or using reusePort can fail with ENOTSUP.
+  // Bind only to the port (or to 127.0.0.1) and omit reusePort.
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();

@@ -52,19 +52,19 @@ export function AnnotatedArticle({
   const renderContent = () => {
     const formattedContent = formatContentWithAnnotations(content);
     let searchMatchCounter = 0;
-    
+
     return formattedContent.map((item, idx) => {
       const itemText = item.text;
-      
+
       // Find highlights that match this content item
       const itemHighlights = highlights.filter(h => h.text && itemText.includes(h.text));
       const itemThoughts = thoughts.filter(t => t.highlightedText && itemText.includes(t.highlightedText));
       const itemAnnotations = annotations.filter(a => a.text && itemText.includes(a.text));
-      
+
       // For headings, render without annotations
       if (item.type === 'heading' || item.type === 'subheading') {
         return (
-          <div 
+          <div
             key={idx}
             className={`font-${fontFamily}`}
             dangerouslySetInnerHTML={{ __html: item.html }}
@@ -75,8 +75,8 @@ export function AnnotatedArticle({
       // For paragraphs, apply annotations if any exist
       if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0) {
         return (
-          <div 
-            key={idx} 
+          <div
+            key={idx}
             className={`font-${fontFamily}`}
             dangerouslySetInnerHTML={{ __html: item.html }}
           />
@@ -85,18 +85,18 @@ export function AnnotatedArticle({
 
       // Render with highlights and annotations
       let renderedText = itemText;
-      
+
       // Apply search highlighting if search text exists
       if (searchText && itemText.toLowerCase().includes(searchText.toLowerCase())) {
         const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedSearch})`, 'gi');
         const parts = itemText.split(regex);
-        
+
         renderedText = parts.map((part, partIdx) => {
           if (part.toLowerCase() === searchText.toLowerCase()) {
             const isCurrentMatch = searchMatchCounter === currentSearchIndex;
-            const className = isCurrentMatch 
-              ? 'search-highlight search-highlight-current' 
+            const className = isCurrentMatch
+              ? 'search-highlight search-highlight-current'
               : 'search-highlight';
             const style = isCurrentMatch
               ? 'background-color: #fbbf24; padding: 2px 4px; border-radius: 2px; font-weight: 600;'
@@ -107,13 +107,13 @@ export function AnnotatedArticle({
           return part;
         }).join('');
       }
-      
+
       // Apply color highlights first (so they don't override thought highlights)
       itemHighlights.forEach(highlight => {
         if (highlight.text && !renderedText.includes(`>${highlight.text}</span>`)) {
           const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
-          
+
           // Define color mapping for all highlight colors
           const colorMap: Record<string, string> = {
             yellow: '#fef08a',
@@ -123,9 +123,9 @@ export function AnnotatedArticle({
             orange: '#fdba74',
             purple: '#d8b4fe'
           };
-          
+
           const bgColor = colorMap[highlight.color] || '#fef08a';
-          
+
           renderedText = renderedText.replace(
             regex,
             `<mark class="highlight-${highlight.color}" style="background-color: ${bgColor}; padding: 2px 4px; border-radius: 2px;">${highlight.text}</mark>`
@@ -140,7 +140,7 @@ export function AnnotatedArticle({
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
           renderedText = renderedText.replace(
             regex,
-            `<span class="highlight-thought" data-thought-id="${thought.id}" style="cursor: pointer; background-color: #dbeafe; border-bottom: 2px dotted #3b82f6; padding: 2px 4px; border-radius: 2px;">${thought.highlightedText}</span>`
+            `<span class="highlight-thought" data-thought-id="${thought.id}" style="cursor: pointer; background-color: #dbeafe; border-bottom: 2px dotted #3b82f6; padding: 2px 4px; border-radius: 2px;">${thought.highlightedText}<span class="print-thought-content" style="display: none;">${thought.text}</span></span>`
           );
         }
       });
@@ -162,7 +162,7 @@ export function AnnotatedArticle({
         if (annotation.text && annotation.color) {
           const escapedText = annotation.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
-          
+
           // Color mapping for sticky notes - match the sticky note background colors
           const stickyColorMap: Record<string, string> = {
             yellow: '#fef3c7',
@@ -171,19 +171,19 @@ export function AnnotatedArticle({
             green: '#dcfce7',
             purple: '#f3e8ff'
           };
-          
+
           const bgColor = stickyColorMap[annotation.color] || '#fef3c7';
-          
+
           renderedText = renderedText.replace(
             regex,
-            `<span class="sticky-note-highlight" data-note-text="${annotation.text}" data-clickable="true" style="background-color: ${bgColor}; padding: 2px 6px; border-radius: 3px; border-left: 3px solid ${annotation.color === 'yellow' ? '#fbbf24' : annotation.color === 'pink' ? '#f472b6' : annotation.color === 'blue' ? '#60a5fa' : annotation.color === 'green' ? '#4ade80' : '#a78bfa'}; cursor: pointer;">${annotation.text}</span>`
+            `<span class="sticky-note-highlight" data-note-text="${annotation.text}" data-clickable="true" style="background-color: ${bgColor}; padding: 2px 6px; border-radius: 3px; border-left: 3px solid ${annotation.color === 'yellow' ? '#fbbf24' : annotation.color === 'pink' ? '#f472b6' : annotation.color === 'blue' ? '#60a5fa' : annotation.color === 'green' ? '#4ade80' : '#a78bfa'}; cursor: pointer;">${annotation.text}<span class="print-note-content" style="display: none;">${annotation.content}</span></span>`
           );
         }
       });
 
       return (
-        <p 
-          key={idx} 
+        <p
+          key={idx}
           className={`font-${fontFamily} mb-4`}
           dangerouslySetInnerHTML={{ __html: renderedText }}
           onMouseOver={(e) => {
@@ -237,7 +237,7 @@ export function AnnotatedArticle({
         <ThoughtCloud
           thought={{ id: activeThought.id, text: activeThought.text }}
           position={thoughtPosition}
-          onSave={() => {}}
+          onSave={() => { }}
           onCancel={() => setActiveThought(null)}
           onEdit={(id, text) => {
             onUpdateThought(id, text);

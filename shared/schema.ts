@@ -148,6 +148,7 @@ export type SearchSuggestion = {
   title: string;
   source: string;
   isDownloaded?: boolean;
+  originalId?: string;
 };
 
 export type SearchResponse = {

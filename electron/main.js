@@ -1,61 +1,35 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const isDev = process.env.NODE_ENV === 'development';
+import { app, BrowserWindow } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import isDev from 'electron-is-dev';
 
-let mainWindow;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    },
-    icon: path.join(__dirname, '../public/icon.png'),
-    backgroundColor: '#fafaf9',
-    show: false
-  });
+    const win = new BrowserWindow({
+        width: 1024,
+        height: 768,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+        },
+    });
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5000');
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-  }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+    if (isDev) {
+        win.loadURL('http://localhost:5000'); // change port if your dev server uses another port
+        win.webContents.openDevTools();
+    } else {
+        win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    }
 }
 
-app.whenReady().then(() => {
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+    if (process.platform !== 'darwin') app.quit();
 });
 
-ipcMain.handle('app-version', () => {
-  return app.getVersion();
-});
-
-ipcMain.handle('get-app-path', () => {
-  return app.getPath('userData');
+app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
