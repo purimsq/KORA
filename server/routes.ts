@@ -808,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               action: 'query',
               titles: searchTitle,
               prop: 'extracts|images|pageimages',
-              explaintext: true,
+              // explaintext: true, // We want HTML to preserve structure (headings)
               pithumbsize: 500,
               format: 'json',
             },

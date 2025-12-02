@@ -45,7 +45,56 @@ export function parseArticleContent(content: string): string {
               formattedLines.push(`<h4 class="text-lg font-semibold mt-4 mb-2">${title}</h4>`);
             }
           } else {
-            formattedLines.push(`<p class="mb-4">${part}</p>`);
+            // 1. Handle Page Numbers: "Page X" or "[Page X]"
+            const pageSplitRegex = /((?:\[\s*Page\s+\d+\s*\])|(?:\bPage\s+\d+\b))/gi;
+            const subParts = part.split(pageSplitRegex);
+
+            subParts.forEach(subPart => {
+              if (!subPart.trim()) return;
+
+              // Check if this part IS a page number
+              const pageMatch = subPart.match(/^\s*(?:(?:Page\s+(\d+))|(?:\[\s*Page\s+(\d+)\s*\]))\s*$/i);
+
+              if (pageMatch) {
+                const pageNum = pageMatch[1] || pageMatch[2];
+                formattedLines.push(`
+                   <div class="w-full my-8">
+                     <hr class="border-t-2 border-dashed border-gray-300 mb-4" />
+                     <div class="text-left font-bold text-gray-500">Page ${pageNum}</div>
+                   </div>
+                 `);
+              } else {
+                // 2. Handle Citations: [1], [2], etc.
+                // User wants [X] to START the next line.
+
+                // Split by citation pattern
+                const citationSplit = subPart.split(/(\[\s*\d+\s*\])/g);
+
+                let currentBuffer = '';
+
+                citationSplit.forEach((chunk) => {
+                  if (!chunk) return;
+
+                  if (/^\[\s*\d+\s*\]$/.test(chunk)) {
+                    // Found a citation. 
+                    // Flush whatever was before it to a paragraph
+                    if (currentBuffer.trim()) {
+                      formattedLines.push(`<p class="mb-4">${currentBuffer.trim()}</p>`);
+                    }
+                    // Start new buffer with this citation
+                    currentBuffer = chunk;
+                  } else {
+                    // Append text to current buffer
+                    currentBuffer += chunk;
+                  }
+                });
+
+                // Flush remaining buffer
+                if (currentBuffer.trim()) {
+                  formattedLines.push(`<p class="mb-4">${currentBuffer.trim()}</p>`);
+                }
+              }
+            });
           }
         });
       }
@@ -88,7 +137,48 @@ export function parseArticleContent(content: string): string {
                 formattedLines.push(`<h4 class="text-lg font-semibold mt-4 mb-2">${title}</h4>`);
               }
             } else {
-              formattedLines.push(`<p class="mb-4">${part}</p>`);
+              // 1. Handle Page Numbers
+              const pageSplitRegex = /((?:\[\s*Page\s+\d+\s*\])|(?:\bPage\s+\d+\b))/gi;
+              const subParts = part.split(pageSplitRegex);
+
+              subParts.forEach(subPart => {
+                if (!subPart.trim()) return;
+
+                const pageMatch = subPart.match(/^\s*(?:(?:Page\s+(\d+))|(?:\[\s*Page\s+(\d+)\s*\]))\s*$/i);
+
+                if (pageMatch) {
+                  const pageNum = pageMatch[1] || pageMatch[2];
+                  formattedLines.push(`
+                      <div class="w-full my-8">
+                        <hr class="border-t-2 border-dashed border-gray-300 mb-4" />
+                        <div class="text-left font-bold text-gray-500">Page ${pageNum}</div>
+                      </div>
+                    `);
+                } else {
+                  // 2. Handle Citations
+                  const citationSplit = subPart.split(/(\[\s*\d+\s*\])/g);
+                  let currentBuffer = '';
+
+                  citationSplit.forEach((chunk) => {
+                    if (!chunk) return;
+
+                    if (/^\[\s*\d+\s*\]$/.test(chunk)) {
+                      // Flush previous buffer
+                      if (currentBuffer.trim()) {
+                        formattedLines.push(`<p class="mb-4">${currentBuffer.trim()}</p>`);
+                      }
+                      // Start new buffer with citation
+                      currentBuffer = chunk;
+                    } else {
+                      currentBuffer += chunk;
+                    }
+                  });
+
+                  if (currentBuffer.trim()) {
+                    formattedLines.push(`<p class="mb-4">${currentBuffer.trim()}</p>`);
+                  }
+                }
+              });
             }
           });
           return;
@@ -135,8 +225,6 @@ export function formatContentWithAnnotations(content: string): Array<{
       const text = node.textContent?.trim();
       if (text) {
         // Split text by subtitle markers (capturing the markers)
-        // Matches ==...==, ===...===, ====...====
-        // Use non-greedy match for content
         const parts = text.split(/((?:={2,4}).+?(?:={2,4}))/g);
 
         parts.forEach(part => {
@@ -168,10 +256,58 @@ export function formatContentWithAnnotations(content: string): Array<{
               });
             }
           } else {
-            formattedContent.push({
-              type: 'paragraph',
-              text: part,
-              html: `<p class="mb-4">${part}</p>`
+            // 1. Handle Page Numbers
+            const pageSplitRegex = /((?:\[\s*Page\s+\d+\s*\])|(?:\bPage\s+\d+\b))/gi;
+            const subParts = part.split(pageSplitRegex);
+
+            subParts.forEach(subPart => {
+              if (!subPart.trim()) return;
+
+              const pageMatch = subPart.match(/^\s*(?:(?:Page\s+(\d+))|(?:\[\s*Page\s+(\d+)\s*\]))\s*$/i);
+              if (pageMatch) {
+                const pageNum = pageMatch[1] || pageMatch[2];
+                formattedContent.push({
+                  type: 'paragraph',
+                  text: subPart,
+                  html: `
+                     <div class="w-full my-8">
+                       <hr class="border-t-2 border-dashed border-gray-300 mb-4" />
+                       <div class="text-left font-bold text-gray-500">Page ${pageNum}</div>
+                     </div>
+                   `
+                });
+              } else {
+                // 2. Handle Citations
+                const citationSplit = subPart.split(/(\[\s*\d+\s*\])/g);
+                let currentBuffer = '';
+
+                citationSplit.forEach((chunk) => {
+                  if (!chunk) return;
+
+                  if (/^\[\s*\d+\s*\]$/.test(chunk)) {
+                    // Flush previous buffer
+                    if (currentBuffer.trim()) {
+                      formattedContent.push({
+                        type: 'paragraph',
+                        text: currentBuffer.trim(),
+                        html: `<p class="mb-4">${currentBuffer.trim()}</p>`
+                      });
+                    }
+                    // Start new buffer with citation
+                    currentBuffer = chunk;
+                  } else {
+                    currentBuffer += chunk;
+                  }
+                });
+
+                if (currentBuffer.trim()) {
+                  formattedContent.push({
+                    type: 'paragraph',
+                    text: currentBuffer.trim(),
+                    html: `<p class="mb-4">${currentBuffer.trim()}</p>`
+                  });
+                }
+              }
             });
           }
         });
@@ -209,6 +345,16 @@ export function formatContentWithAnnotations(content: string): Array<{
 
       // Handle paragraphs and divs
       if (el.tagName === 'P' || el.tagName === 'DIV') {
+        // Check for media first
+        if (el.querySelector('.kora-media-wrapper') || el.querySelector('audio') || el.querySelector('video')) {
+          formattedContent.push({
+            type: 'media',
+            text: '',
+            html: el.outerHTML
+          });
+          return;
+        }
+
         const text = el.textContent?.trim();
         if (text) {
           // Split text by subtitle markers (capturing the markers)
@@ -242,43 +388,70 @@ export function formatContentWithAnnotations(content: string): Array<{
                 });
               }
             } else {
-              // If it's a P tag originally, we can keep it as P.
-              // But if we split a P tag, we are creating multiple blocks.
-              // This is fine as we are returning a list of blocks.
-              formattedContent.push({
-                type: 'paragraph',
-                text: part,
-                html: `<p class="mb-4">${part}</p>`
+              // 1. Handle Page Numbers
+              const pageSplitRegex = /((?:\[\s*Page\s+\d+\s*\])|(?:\bPage\s+\d+\b))/gi;
+              const subParts = part.split(pageSplitRegex);
+
+              subParts.forEach(subPart => {
+                if (!subPart.trim()) return;
+
+                const pageMatch = subPart.match(/^\s*(?:(?:Page\s+(\d+))|(?:\[\s*Page\s+(\d+)\s*\]))\s*$/i);
+                if (pageMatch) {
+                  const pageNum = pageMatch[1] || pageMatch[2];
+                  formattedContent.push({
+                    type: 'paragraph',
+                    text: subPart,
+                    html: `
+                        <div class="w-full my-8">
+                          <hr class="border-t-2 border-dashed border-gray-300 mb-4" />
+                          <div class="text-left font-bold text-gray-500">Page ${pageNum}</div>
+                        </div>
+                      `
+                  });
+                } else {
+                  // 2. Handle Citations
+                  const citationSplit = subPart.split(/(\[\s*\d+\s*\])/g);
+                  let currentBuffer = '';
+
+                  citationSplit.forEach((chunk) => {
+                    if (!chunk) return;
+
+                    if (/^\[\s*\d+\s*\]$/.test(chunk)) {
+                      // Flush previous buffer
+                      if (currentBuffer.trim()) {
+                        formattedContent.push({
+                          type: 'paragraph',
+                          text: currentBuffer.trim(),
+                          html: `<p class="mb-4">${currentBuffer.trim()}</p>`
+                        });
+                      }
+                      // Start new buffer with citation
+                      currentBuffer = chunk;
+                    } else {
+                      currentBuffer += chunk;
+                    }
+                  });
+
+                  if (currentBuffer.trim()) {
+                    formattedContent.push({
+                      type: 'paragraph',
+                      text: currentBuffer.trim(),
+                      html: `<p class="mb-4">${currentBuffer.trim()}</p>`
+                    });
+                  }
+                }
               });
             }
           });
-
-          // If the element had media, we need to handle it.
-          // The split logic above only handles text content.
-          // If there is media, we might lose it if we only process textContent.
-          // Check if there are child elements that are media.
-          if (el.querySelector('.kora-media-wrapper') || el.querySelector('audio') || el.querySelector('video')) {
-            // If we have media, the simple text split might be destructive.
-            // Fallback to preserving the whole element if it has media, 
-            // OR try to be smarter.
-            // For now, if media is present, let's assume it's a complex block and just return it as is,
-            // maybe missing some subtitle formatting but preserving media is more important.
-            // However, the previous logic pushed media separately.
-            // Let's check if we pushed anything.
-            // If we pushed parts, we might have duplicated text if we also push outerHTML.
-            // Actually, if we have media, we should probably skip the text splitting to avoid breaking the media.
-            // Let's revert the split for this specific case (media presence).
-          }
-        } else {
-          // No text, maybe just media?
-          if (el.querySelector('.kora-media-wrapper') || el.querySelector('audio') || el.querySelector('video')) {
-            formattedContent.push({
-              type: 'media',
-              text: '',
-              html: el.outerHTML
-            });
-          }
+          return;
         }
+
+        // If no text and no media (empty P/DIV?), just push outerHTML or ignore
+        formattedContent.push({
+          type: 'paragraph',
+          text: el.textContent || '',
+          html: el.outerHTML
+        });
         return;
       }
 
