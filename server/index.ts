@@ -3,8 +3,18 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Increase body size limit to 50MB (in bytes) and parameter limit
+app.use(express.json({ limit: 52428800 }));
+app.use(express.urlencoded({ extended: false, limit: 52428800, parameterLimit: 50000 }));
+
+// Debug middleware to log request size
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.path === '/api/downloads') {
+    const contentLength = req.get('content-length');
+    console.log(`[DEBUG] POST /api/downloads Content-Length: ${contentLength} bytes`);
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

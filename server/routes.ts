@@ -31,7 +31,24 @@ async function fetchFullContent(url: string): Promise<{ content: string; textCon
     }
 
     const dom = new JSDOM(response.data, { url });
-    const reader = new Readability(dom.window.document);
+
+    // Pre-process: Ensure audio/video are preserved
+    // Readability often strips these, so we wrap them in a container we explicitly preserve
+    dom.window.document.querySelectorAll('audio, video').forEach(element => {
+      const el = element as unknown as HTMLElement;
+      el.setAttribute('controls', 'true'); // Ensure controls are enabled
+      el.style.width = '100%'; // Make responsive
+
+      const wrapper = dom.window.document.createElement('div');
+      wrapper.className = 'kora-media-wrapper';
+      // Copy attributes to wrapper to help with preservation if needed, but class should be enough
+      el.parentNode?.insertBefore(wrapper, el);
+      wrapper.appendChild(el);
+    });
+
+    const reader = new Readability(dom.window.document, {
+      classesToPreserve: ['kora-media-wrapper']
+    });
     const article = reader.parse();
 
     if (article) {
@@ -904,7 +921,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const download = await storage.createDownload(validatedData);
       res.json({ download });
     } catch (error) {
-      res.status(400).json({ error: 'Invalid download data' });
+      console.error('Download validation error:', error);
+      res.status(400).json({ error: 'Invalid download data', details: error });
     }
   });
 

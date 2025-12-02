@@ -4,6 +4,10 @@ import { BackgroundDecorations } from "@/components/BackgroundDecorations";
 import { PulseAnimation } from "@/components/PulseAnimation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSearch } from "@/hooks/useSearch";
@@ -30,7 +34,8 @@ export default function SearchPage() {
     const saved = sessionStorage.getItem('currentArticle');
     return saved ? JSON.parse(saved)?.content || "" : "";
   });
-  
+  const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string } | null>(null);
+
   const { toast } = useToast();
   const { data: searchData, isLoading: isSearching } = useSearch(query);
   const createDownload = useCreateDownload();
@@ -63,7 +68,7 @@ export default function SearchPage() {
   const fetchArticle = async (suggestion: SearchSuggestion) => {
     try {
       let data;
-      
+
       // If already downloaded, load from downloads
       if (suggestion.isDownloaded) {
         const response = await fetch(`/api/downloads/${suggestion.id}`);
@@ -78,12 +83,12 @@ export default function SearchPage() {
         );
         data = await response.json();
       }
-      
+
       if (data.article) {
         setArticle(data.article);
         setTypedContent(data.article.content); // Show full content immediately
         setIsTyping(true); // Start scanning animation
-        
+
         // Scanning effect duration
         setTimeout(() => {
           setIsTyping(false);
@@ -128,12 +133,12 @@ export default function SearchPage() {
           title: article.title,
           content: article.content,
           abstract: article.abstract,
-          authors: article.authors,
+          authors: article.authors || [],
           source: article.source,
           sourceUrl: article.sourceUrl,
           category: article.category,
-          thumbnail: article.images?.[0]?.url,
-          images: article.images,
+          thumbnail: article.images?.[0]?.url || null,
+          images: article.images || [],
         },
         {
           onSuccess: () => {
@@ -142,10 +147,16 @@ export default function SearchPage() {
               description: `"${article.title}" has been saved to your downloads.`,
             });
           },
-          onError: () => {
+          onError: (error: any) => {
+            console.error("Download error:", error);
+            // Try to extract a meaningful message from the error
+            let errorMessage = "Failed to download article";
+            if (error.message) errorMessage += `: ${error.message}`;
+            if (error.info?.error) errorMessage += `: ${error.info.error}`;
+
             toast({
               title: "Error",
-              description: "Failed to download article",
+              description: errorMessage,
               variant: "destructive",
             });
           },
@@ -171,7 +182,7 @@ export default function SearchPage() {
           </div>
 
           <div className="mb-12">
-            <SearchBar 
+            <SearchBar
               onSearch={handleSearch}
               onSuggestionClick={handleSuggestionClick}
               suggestions={searchData?.suggestions || []}
@@ -186,7 +197,7 @@ export default function SearchPage() {
                 <h1 className="text-3xl font-bold text-foreground article-font" data-testid="text-article-title">
                   {article.title}
                 </h1>
-                <Button 
+                <Button
                   onClick={handleDownload}
                   disabled={createDownload.isPending}
                   className="gap-2 shrink-0"
@@ -206,11 +217,15 @@ export default function SearchPage() {
               <div className="prose prose-lg max-w-none article-font space-y-6 overflow-hidden">
                 {article.images && article.images.length > 0 && (
                   <div className="float-right ml-6 mb-4 w-full sm:w-1/2 max-w-md animate-fade-in">
-                    <img 
-                      src={article.images[0].url} 
+                    <img
+                      src={article.images[0].url}
                       alt={article.images[0].caption || article.title}
-                      className="w-full max-w-full h-auto rounded-lg shadow-md object-contain"
+                      className="w-full max-w-full h-auto rounded-lg shadow-md object-contain cursor-pointer hover:opacity-95 transition-opacity"
                       data-testid="img-article-0"
+                      onClick={() => setSelectedImage({
+                        url: article.images[0].url,
+                        caption: article.images[0].caption || article.title
+                      })}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -223,22 +238,37 @@ export default function SearchPage() {
                     )}
                   </div>
                 )}
-                <div 
+                <div
                   data-testid="text-article-content"
                   className={isTyping ? 'scanning-effect' : ''}
-                  dangerouslySetInnerHTML={{ 
+                  dangerouslySetInnerHTML={{
                     __html: parseArticleContent(article.content)
+                  }}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.tagName === 'IMG') {
+                      e.preventDefault();
+                      const img = target as HTMLImageElement;
+                      setSelectedImage({
+                        url: img.src,
+                        caption: img.alt
+                      });
+                    }
                   }}
                 />
                 {article.images && article.images.length > 1 && (
                   <div className="space-y-4 clear-both">
                     {article.images.slice(1).map((img: any, index: number) => (
                       <div key={index + 1} className="animate-fade-in max-w-3xl mx-auto">
-                        <img 
-                          src={img.url} 
+                        <img
+                          src={img.url}
                           alt={img.caption || article.title}
-                          className="w-full max-w-full h-auto rounded-lg shadow-md object-contain"
+                          className="w-full max-w-full h-auto rounded-lg shadow-md object-contain cursor-pointer hover:opacity-95 transition-opacity"
                           data-testid={`img-article-${index + 1}`}
+                          onClick={() => setSelectedImage({
+                            url: img.url,
+                            caption: img.caption || article.title
+                          })}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
@@ -257,7 +287,7 @@ export default function SearchPage() {
 
               {article.sourceUrl && (
                 <div className="mt-6 pt-6 border-t">
-                  <a 
+                  <a
                     href={article.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -281,6 +311,23 @@ export default function SearchPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-none shadow-none">
+          <div className="relative">
+            <img
+              src={selectedImage?.url}
+              alt={selectedImage?.caption || "Article image"}
+              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+            />
+            {selectedImage?.caption && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-4 text-center backdrop-blur-sm">
+                <p className="text-sm">{selectedImage.caption}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -56,9 +56,8 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
     <>
       {/* Sidebar */}
       <div
-        className={`fixed right-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-l shadow-xl transition-all duration-300 z-40 ${
-          isOpen ? (isMaximized ? 'w-[600px]' : 'w-80') : 'w-0'
-        }`}
+        className={`fixed right-0 top-16 h-[calc(100vh-4rem)] bg-background/95 backdrop-blur border-l shadow-xl transition-all duration-300 z-40 ${isOpen ? (isMaximized ? 'w-[600px]' : 'w-80') : 'w-0'
+          }`}
         data-testid="sticky-notes-sidebar"
       >
         {isOpen && (
@@ -96,15 +95,15 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
 
                   const rotation = idx % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]';
                   const hoverRotation = idx % 2 === 0 ? 'hover:rotate-[-2deg]' : 'hover:rotate-[2deg]';
-                  
+
                   return (
                     <Card
                       key={note.id}
                       id={`sticky-note-${note.id}`}
                       className={`relative p-4 ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text} border-t-4 shadow-xl hover:shadow-2xl transition-all cursor-pointer transform ${rotation} ${hoverRotation} ${highlightedNoteId === note.id ? 'animate-bounce ring-4 ring-primary' : ''}`}
-                      style={{ 
+                      style={{
                         minHeight: '140px',
-                        maxHeight: '200px',
+                        height: 'auto',
                         boxShadow: '0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1)',
                       }}
                       onClick={() => !isEditing && onNoteClick(note.text)}
@@ -112,10 +111,10 @@ export function StickyNotesSidebar({ notes, onNoteClick, onUpdateNote, onDeleteN
                     >
                       {/* Sticky note pin at the top */}
                       <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-400 dark:bg-gray-600 rounded-full shadow-md" />
-                      
+
                       {/* Sticky note realistic top edge */}
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-gray-400/20 to-transparent" />
-                      
+
                       {isEditing ? (
                         <div onClick={(e) => e.stopPropagation()}>
                           <Textarea

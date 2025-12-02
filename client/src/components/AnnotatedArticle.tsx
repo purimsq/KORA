@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import type { Highlight, Thought, Annotation } from "@shared/schema";
 import { ThoughtCloud } from "./ThoughtCloud";
 import { formatContentWithAnnotations } from "@/lib/contentParser";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 interface AnnotatedArticleProps {
   content: string;
@@ -18,6 +22,8 @@ interface AnnotatedArticleProps {
   onDeleteAnnotation: (id: string) => void;
   onNoteClick?: (text: string) => void;
   onStickyNoteClick?: (text: string) => void;
+  onHighlightClick?: (id: string, text: string) => void;
+  onAnnotationClick?: (id: string, text: string) => void;
 }
 
 export function AnnotatedArticle({
@@ -35,9 +41,12 @@ export function AnnotatedArticle({
   onDeleteAnnotation,
   onNoteClick,
   onStickyNoteClick,
+  onHighlightClick,
+  onAnnotationClick,
 }: AnnotatedArticleProps) {
   const [activeThought, setActiveThought] = useState<Thought | null>(null);
   const [thoughtPosition, setThoughtPosition] = useState({ top: 0, left: 0 });
+  const [selectedImage, setSelectedImage] = useState<{ url: string; caption?: string } | null>(null);
 
   const handleThoughtHover = (thought: Thought, event: React.MouseEvent) => {
     const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -72,6 +81,17 @@ export function AnnotatedArticle({
         );
       }
 
+      // For media (audio/video), render as is without annotations
+      if (item.type === 'media') {
+        return (
+          <div
+            key={idx}
+            className="my-6"
+            dangerouslySetInnerHTML={{ __html: item.html }}
+          />
+        );
+      }
+
       // For paragraphs, apply annotations if any exist
       if (itemHighlights.length === 0 && itemThoughts.length === 0 && itemAnnotations.length === 0) {
         return (
@@ -79,6 +99,19 @@ export function AnnotatedArticle({
             key={idx}
             className={`font-${fontFamily}`}
             dangerouslySetInnerHTML={{ __html: item.html }}
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              // Handle image clicks
+              if (target.tagName === 'IMG') {
+                e.preventDefault();
+                const img = target as HTMLImageElement;
+                setSelectedImage({
+                  url: img.src,
+                  caption: img.alt
+                });
+                return;
+              }
+            }}
           />
         );
       }
@@ -128,7 +161,7 @@ export function AnnotatedArticle({
 
           renderedText = renderedText.replace(
             regex,
-            `<mark class="highlight-${highlight.color}" style="background-color: ${bgColor}; padding: 2px 4px; border-radius: 2px;">${highlight.text}</mark>`
+            `<mark class="highlight-${highlight.color}" data-highlight-id="${highlight.id}" style="background-color: ${bgColor}; padding: 2px 4px; border-radius: 2px; cursor: pointer;">${highlight.text}</mark>`
           );
         }
       });
@@ -152,7 +185,7 @@ export function AnnotatedArticle({
           const regex = new RegExp(`(?![^<]*>)${escapedText}`, 'g');
           renderedText = renderedText.replace(
             regex,
-            `<span class="underline-annotation" style="text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 2px; text-underline-offset: 3px;">${annotation.text}</span>`
+            `<span class="underline-annotation" data-annotation-id="${annotation.id}" style="text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: pointer;">${annotation.text}</span>`
           );
         }
       });
@@ -186,6 +219,39 @@ export function AnnotatedArticle({
           key={idx}
           className={`font-${fontFamily} mb-4`}
           dangerouslySetInnerHTML={{ __html: renderedText }}
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+
+            // Handle image clicks
+            if (target.tagName === 'IMG') {
+              e.preventDefault();
+              const img = target as HTMLImageElement;
+              setSelectedImage({
+                url: img.src,
+                caption: img.alt
+              });
+              return;
+            }
+
+            // Handle highlight clicks
+            if (target.dataset.highlightId && onHighlightClick) {
+              onHighlightClick(target.dataset.highlightId, target.textContent || '');
+              e.stopPropagation();
+              return;
+            }
+            // Handle underline clicks
+            if (target.dataset.annotationId && onAnnotationClick) {
+              onAnnotationClick(target.dataset.annotationId, target.textContent || '');
+              e.stopPropagation();
+              return;
+            }
+            // Handle sticky note clicks
+            if (target.dataset.clickable && target.dataset.noteText && onStickyNoteClick) {
+              onStickyNoteClick(target.dataset.noteText);
+              e.stopPropagation();
+              return;
+            }
+          }}
           onMouseOver={(e) => {
             const target = e.target as HTMLElement;
             if (target.dataset.thoughtId) {
@@ -201,12 +267,7 @@ export function AnnotatedArticle({
               setActiveThought(null);
             }
           }}
-          onClick={(e) => {
-            const target = e.target as HTMLElement;
-            if (target.dataset.clickable && target.dataset.noteText && onStickyNoteClick) {
-              onStickyNoteClick(target.dataset.noteText);
-            }
-          }}
+
         />
       );
     });
@@ -249,6 +310,23 @@ export function AnnotatedArticle({
           }}
         />
       )}
+
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-none shadow-none">
+          <div className="relative">
+            <img
+              src={selectedImage?.url}
+              alt={selectedImage?.caption || "Article image"}
+              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+            />
+            {selectedImage?.caption && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-4 text-center backdrop-blur-sm">
+                <p className="text-sm">{selectedImage.caption}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -39,6 +39,7 @@ import {
   useDeleteThought,
   useUpdateAnnotation,
   useDeleteAnnotation,
+  useDeleteHighlight,
 } from "@/hooks/useAnnotations";
 import { usePreferences } from "@/hooks/usePreferences";
 import jsPDF from 'jspdf';
@@ -71,6 +72,9 @@ export default function OfflineReaderPage() {
   const [showStickyNotes, setShowStickyNotes] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [totalSearchMatches, setTotalSearchMatches] = useState(0);
+
+  // Generic delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'highlight' | 'underline' | 'thought' | 'sticky_note' } | null>(null);
 
   const { toast } = useToast();
 
@@ -106,6 +110,7 @@ export default function OfflineReaderPage() {
   const deleteThought = useDeleteThought();
   const updateAnnotation = useUpdateAnnotation();
   const deleteAnnotation = useDeleteAnnotation();
+  const deleteHighlight = useDeleteHighlight();
 
   const article = data?.download;
   const fontFamily = prefsData?.preferences?.fontFamily || 'sans';
@@ -271,14 +276,18 @@ export default function OfflineReaderPage() {
       );
 
       if (underlineAnnotation) {
-        deleteAnnotation.mutate({ id: underlineAnnotation.id, downloadId }, {
-          onSuccess: () => {
-            toast({ title: "Underline Removed" });
-            setShowToolbar(false);
-          },
-        });
+        setDeleteConfirm({ id: underlineAnnotation.id, type: 'underline' });
+        setShowToolbar(false);
       }
     }
+  };
+
+  const handleHighlightClick = (id: string, text: string) => {
+    setDeleteConfirm({ id, type: 'highlight' });
+  };
+
+  const handleAnnotationClick = (id: string, text: string) => {
+    setDeleteConfirm({ id, type: 'underline' });
   };
 
   const handleStickyNoteTextClick = (noteText: string) => {
@@ -306,6 +315,28 @@ export default function OfflineReaderPage() {
         setHighlightedNoteId(null);
       }, 2000);
     }, 100);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteConfirm) return;
+
+    const { id, type } = deleteConfirm;
+
+    if (type === 'highlight') {
+      deleteHighlight.mutate({ id, downloadId }, {
+        onSuccess: () => toast({ title: "Highlight Removed" })
+      });
+    } else if (type === 'underline' || type === 'sticky_note') {
+      deleteAnnotation.mutate({ id, downloadId }, {
+        onSuccess: () => toast({ title: type === 'underline' ? "Underline Removed" : "Sticky Note Deleted" })
+      });
+    } else if (type === 'thought') {
+      deleteThought.mutate({ id, downloadId }, {
+        onSuccess: () => toast({ title: "Thought Deleted" })
+      });
+    }
+
+    setDeleteConfirm(null);
   };
 
   const handleExportPDF = async (includeEdits: boolean) => {
@@ -507,11 +538,13 @@ export default function OfflineReaderPage() {
                 currentSearchIndex={currentSearchIndex}
                 onSearchMatchesFound={setTotalSearchMatches}
                 onUpdateThought={(id, text) => updateThought.mutate({ id, text, downloadId })}
-                onDeleteThought={(id) => deleteThought.mutate({ id, downloadId })}
+                onDeleteThought={(id) => setDeleteConfirm({ id, type: 'thought' })}
                 onUpdateAnnotation={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
-                onDeleteAnnotation={(id) => deleteAnnotation.mutate({ id, downloadId })}
+                onDeleteAnnotation={(id) => setDeleteConfirm({ id, type: 'sticky_note' })}
                 onNoteClick={handleNoteClick}
                 onStickyNoteClick={handleStickyNoteTextClick}
+                onHighlightClick={handleHighlightClick}
+                onAnnotationClick={handleAnnotationClick}
               />
               {article.images && article.images.length > 1 && (
                 <div className="space-y-4 clear-both">
@@ -600,38 +633,35 @@ export default function OfflineReaderPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Table of Contents */}
-      {article && (
-        <TableOfContents
-          content={article.content}
-          isOpen={showTOC}
-          onToggle={() => setShowTOC(!showTOC)}
-        />
-      )}
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this {deleteConfirm?.type.replace('_', ' ')}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Sticky Notes Sidebar */}
       <StickyNotesSidebar
-        notes={annotations.filter(a => a.type === 'sticky_note')}
+        notes={stickyNotes}
         onNoteClick={handleNoteClick}
         onUpdateNote={(id, content) => updateAnnotation.mutate({ id, content, downloadId })}
-        onDeleteNote={(id) => deleteAnnotation.mutate({ id, downloadId })}
+        onDeleteNote={(id) => setDeleteConfirm({ id, type: 'sticky_note' })}
         highlightedNoteId={highlightedNoteId}
         isOpen={showStickyNotes}
         onToggle={() => setShowStickyNotes(!showStickyNotes)}
       />
-
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <Button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full shadow-2xl hover:shadow-3xl transition-all"
-          size="icon"
-          data-testid="button-scroll-to-top"
-          title="Scroll to top"
-        >
-          <ArrowUp className="w-5 h-5" />
-        </Button>
-      )}
     </div>
   );
 }
